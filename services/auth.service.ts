@@ -1,29 +1,7 @@
 // Servicio de autenticación para VigilApp
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
+import { AuthResponse, LoginCredentials, RegisterCredentials } from './types/auth.types';
 
-export interface RegisterData {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  name: string;
-}
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  name: string;
-  token: string;
-}
-
-export interface AuthResponse {
-  success: boolean;
-  user?: AuthUser;
-  token?: string;
-  message?: string;
-}
+export { AuthResponse, LoginCredentials, RegisterCredentials };
 
 class AuthService {
   private baseUrl = 'https://your-api-url.com/api'; // Cambia por tu URL real
@@ -98,7 +76,7 @@ class AuthService {
   }
 
   // Registro
-  async register(userData: RegisterData): Promise<AuthResponse> {
+  async register(userData: RegisterCredentials): Promise<AuthResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/auth/register`, {
         method: 'POST',
@@ -145,7 +123,7 @@ class AuthService {
   }
 
   // Obtener información del usuario actual
-  async getCurrentUser(): Promise<AuthUser | null> {
+  async getCurrentUser(): Promise<any | null> {
     try {
       const token = await this.getStoredToken();
       if (!token) return null;

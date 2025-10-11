@@ -3,12 +3,11 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { LoginCredentials } from '@/services/auth.service';
 import React, { useState } from 'react';
 import {
-  Platform,
   StyleSheet,
   Switch,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 
@@ -109,13 +108,11 @@ export function LoginForm({ onLogin, onRegister, loading }: LoginFormProps) {
           autoCapitalize="none"
           autoCorrect={false}
           editable={!loading}
-          outlineStyle="none"
           underlineColorAndroid="transparent"
           selectionColor={colors.primary}
           style={[
             styles.input, 
-            { color: colors.text },
-            Platform.OS === 'web' && { outline: 'none', border: 'none' }
+            { color: colors.text }
           ]}
           onFocus={() => setEmailFocused(true)}
           onBlur={() => setEmailFocused(false)}
@@ -150,13 +147,11 @@ export function LoginForm({ onLogin, onRegister, loading }: LoginFormProps) {
           autoCapitalize="none"
           autoCorrect={false}
           editable={!loading}
-          outlineStyle="none"
           underlineColorAndroid="transparent"
           selectionColor={colors.primary}
           style={[
             styles.input, 
-            { color: colors.text },
-            Platform.OS === 'web' && { outline: 'none', border: 'none' }
+            { color: colors.text }
           ]}
           onFocus={() => setPasswordFocused(true)}
           onBlur={() => setPasswordFocused(false)}
@@ -267,6 +262,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     borderWidth: 0,
     backgroundColor: 'transparent',
+    outlineWidth: 0,
   },
   eyeIcon: {
     padding: 8,

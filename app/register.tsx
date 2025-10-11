@@ -1,32 +1,32 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    View
 } from 'react-native';
 
-import { LoginForm } from '@/components/auth/LoginForm';
+import { RegisterForm } from '@/components/auth/RegisterForm';
 import { ShieldIcon } from '@/components/ShieldIcon';
 import { ThemedText } from '@/components/themed-text';
-import { authService, LoginCredentials } from '@/services/auth.service';
+import { authService, RegisterCredentials } from '@/services/auth.service';
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (credentials: LoginCredentials) => {
+  const handleRegister = async (credentials: RegisterCredentials) => {
     setLoading(true);
-    
     try {
-      const response = await authService.login(credentials);
+      const response = await authService.register(credentials);
       
       if (response.success) {
-        Alert.alert('Éxito', 'Inicio de sesión exitoso');
+        Alert.alert('Éxito', 'Registro exitoso. Ya puedes iniciar sesión.');
+        // TODO: Navegar al login o hacer login automático
       } else {
-        Alert.alert('Error', response.message || 'Error al iniciar sesión');
+        Alert.alert('Error', response.message || 'Error al registrarse');
       }
     } catch (error) {
       Alert.alert('Error', 'Error inesperado. Intenta nuevamente.');
@@ -35,10 +35,10 @@ export default function LoginScreen() {
     }
   };
 
-  const handleRegister = () => {
-    // Navegar a la página de registro
+  const handleBackToLogin = () => {
+    // Navegar al login
     const { router } = require('expo-router');
-    router.push('/register');
+    router.back();
   };
 
   return (
@@ -60,14 +60,14 @@ export default function LoginScreen() {
             </ThemedText>
           </View>
           <ThemedText style={styles.subtitle}>
-            Sistema de Alertas Comunitarias
+            Únete al Sistema de Alertas Comunitarias
           </ThemedText>
         </View>
 
         <View style={styles.formContainer}>
-          <LoginForm 
-            onLogin={handleLogin}
+          <RegisterForm 
             onRegister={handleRegister}
+            onBackToLogin={handleBackToLogin}
             loading={loading}
           />
         </View>
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: -100,
+    marginBottom: 20,
   },
   logoContainer: {
     flexDirection: 'row',

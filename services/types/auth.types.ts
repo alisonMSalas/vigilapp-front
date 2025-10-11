@@ -13,6 +13,17 @@ export interface LoginCredentials {
   password: string;
 }
 
+export interface RegisterCredentials {
+  name: string;
+  email: string;
+  password: string;
+  idNumber?: string;
+  phone?: string;
+  province?: string;
+  city?: string;
+  address?: string;
+}
+
 export interface RegisterData {
   email: string;
   password: string;
