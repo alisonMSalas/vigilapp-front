@@ -19,17 +19,27 @@ export default function RegisterScreen() {
 
   const handleRegister = async (credentials: RegisterCredentials) => {
     setLoading(true);
+
     try {
-      const response = await authService.register(credentials);
-      
-      if (response.success) {
-        Alert.alert('Éxito', 'Registro exitoso. Ya puedes iniciar sesión.');
-        // TODO: Navegar al login o hacer login automático
+      const result = await authService.register(credentials);
+
+      if (result.success) {
+        Alert.alert(
+          'Éxito',
+          result.message || 'Registro exitoso. Ya puedes iniciar sesión.',
+          [
+            {
+              text: 'Ir al Login',
+              onPress: handleBackToLogin,
+            },
+          ]
+        );
       } else {
-        Alert.alert('Error', response.message || 'Error al registrarse');
+        Alert.alert('Error', result.message || 'Error al registrarse');
       }
     } catch (error) {
       Alert.alert('Error', 'Error inesperado. Intenta nuevamente.');
+      console.error('Register error:', error);
     } finally {
       setLoading(false);
     }
