@@ -1,12 +1,12 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    View
 } from 'react-native';
 
 import { LoginForm } from '@/components/auth/LoginForm';
@@ -25,8 +25,8 @@ export default function LoginScreen() {
 
       if (result.success) {
         Alert.alert('Éxito', result.message || 'Inicio de sesión exitoso');
-        // TODO: Navegar a la pantalla principal de la app
-        // router.replace('/(tabs)/home');
+        const { router } = require('expo-router');
+        router.replace('/home');
       } else {
         Alert.alert('Error', result.message || 'Error al iniciar sesión');
       }

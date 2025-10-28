@@ -6,7 +6,7 @@
 // URL base del backend Spring Boot
 // TODO: Cambiar a la IP/URL real del servidor en producción
 export const API_CONFIG = {
-  BASE_URL: 'http://10.79.2.178:8080/api',
+  BASE_URL: 'http://localhost:8080/api',
   TIMEOUT: 30000, // 30 segundos timeout para uploads de imágenes
 } as const;
 
