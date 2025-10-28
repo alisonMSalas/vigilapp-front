@@ -8,7 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "check-backend": "node ./scripts/check-backend.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -20,6 +21,7 @@
     "expo-font": "~14.0.9",
     "expo-haptics": "~15.0.7",
     "expo-image": "~3.0.9",
+    "expo-image-picker": "^17.0.8",
     "expo-linking": "~8.0.8",
     "expo-router": "~6.0.11",
     "expo-splash-screen": "~31.0.10",

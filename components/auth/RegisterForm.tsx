@@ -1,8 +1,13 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { RegisterCredentials } from '@/services/auth.service';
+import { ImageAsset, RegisterCredentials } from '@/services/auth.service';
+import imagePickerService from '@/services/image-picker.service';
 import React, { useState } from 'react';
 import {
+    ActionSheetIOS,
+    Alert,
+    Image,
+    Platform,
     ScrollView,
     StyleSheet,
     Switch,
@@ -30,18 +35,22 @@ export function RegisterForm({ onRegister, onBackToLogin, loading }: RegisterFor
   const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+
+  // Estados para imágenes
+  const [fotoCedula, setFotoCedula] = useState<ImageAsset | null>(null);
+  const [selfie, setSelfie] = useState<ImageAsset | null>(null);
+
   // Estados para visibilidad de contraseñas
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Estados para switches
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptNotifications, setAcceptNotifications] = useState(false);
-  
+
   // Estados para focus
   const [focusedFields, setFocusedFields] = useState<{[key: string]: boolean}>({});
-  
+
   // Estados para errores
   const [errors, setErrors] = useState<{[key: string]: string}>({});
 
@@ -88,21 +97,111 @@ export function RegisterForm({ onRegister, onBackToLogin, loading }: RegisterFor
     setFocusedFields(prev => ({ ...prev, [field]: false }));
   };
 
+  /**
+   * Mostrar selector de fuente de imagen (Cámara o Galería)
+   */
+  const showImageSourcePicker = (type: 'cedula' | 'selfie') => {
+    const title = type === 'cedula' ? 'Foto de Cédula' : 'Selfie para Verificación';
+    const message = type === 'cedula'
+      ? 'Selecciona cómo deseas capturar la foto de tu cédula'
+      : 'Selecciona cómo deseas tomar tu selfie';
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title,
+          options: ['Cancelar', 'Tomar Foto', 'Elegir de Galería'],
+          cancelButtonIndex: 0,
+        },
+        async (buttonIndex) => {
+          if (buttonIndex === 1) {
+            await handleTakePhoto(type);
+          } else if (buttonIndex === 2) {
+            await handlePickFromGallery(type);
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        title,
+        message,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Tomar Foto', onPress: () => handleTakePhoto(type) },
+          { text: 'Elegir de Galería', onPress: () => handlePickFromGallery(type) },
+        ]
+      );
+    }
+  };
+
+  /**
+   * Tomar foto con la cámara
+   */
+  const handleTakePhoto = async (type: 'cedula' | 'selfie') => {
+    const result = await imagePickerService.takePhoto();
+
+    if (result.success && result.image) {
+      if (type === 'cedula') {
+        setFotoCedula(result.image);
+        if (errors.fotoCedula) {
+          setErrors(prev => ({ ...prev, fotoCedula: '' }));
+        }
+      } else {
+        setSelfie(result.image);
+        if (errors.selfie) {
+          setErrors(prev => ({ ...prev, selfie: '' }));
+        }
+      }
+    } else if (result.error) {
+      Alert.alert('Error', result.error);
+    }
+  };
+
+  /**
+   * Seleccionar imagen de la galería
+   */
+  const handlePickFromGallery = async (type: 'cedula' | 'selfie') => {
+    const result = await imagePickerService.pickFromGallery();
+
+    if (result.success && result.image) {
+      if (type === 'cedula') {
+        setFotoCedula(result.image);
+        if (errors.fotoCedula) {
+          setErrors(prev => ({ ...prev, fotoCedula: '' }));
+        }
+      } else {
+        setSelfie(result.image);
+        if (errors.selfie) {
+          setErrors(prev => ({ ...prev, selfie: '' }));
+        }
+      }
+    } else if (result.error) {
+      Alert.alert('Error', result.error);
+    }
+  };
+
+  /**
+   * Eliminar imagen seleccionada
+   */
+  const handleRemoveImage = (type: 'cedula' | 'selfie') => {
+    if (type === 'cedula') {
+      setFotoCedula(null);
+    } else {
+      setSelfie(null);
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: {[key: string]: string} = {};
 
     // Validar campos obligatorios
     if (!firstName.trim()) newErrors.firstName = 'Los nombres son obligatorios';
     if (!lastName.trim()) newErrors.lastName = 'Los apellidos son obligatorios';
-    if (!idNumber.trim()) newErrors.idNumber = 'La cédula/pasaporte es obligatorio';
-    if (!phone.trim()) newErrors.phone = 'El teléfono es obligatorio';
     if (!email.trim()) {
       newErrors.email = 'El correo electrónico es obligatorio';
     } else if (!email.includes('@')) {
       newErrors.email = 'Ingresa un correo electrónico válido';
     }
-    if (!province.trim()) newErrors.province = 'La provincia es obligatoria';
-    if (!city.trim()) newErrors.city = 'La ciudad es obligatoria';
     if (!password.trim()) {
       newErrors.password = 'La contraseña es obligatoria';
     } else if (password.length < 8) {
@@ -114,9 +213,17 @@ export function RegisterForm({ onRegister, onBackToLogin, loading }: RegisterFor
       newErrors.confirmPassword = 'Las contraseñas no coinciden';
     }
 
+    // Validar imágenes obligatorias
+    if (!fotoCedula) {
+      newErrors.fotoCedula = 'La foto de cédula es obligatoria';
+    }
+    if (!selfie) {
+      newErrors.selfie = 'La selfie es obligatoria';
+    }
+
     // Validar términos y condiciones
     if (!acceptTerms) {
-      alert('Debes aceptar los términos y condiciones');
+      Alert.alert('Atención', 'Debes aceptar los términos y condiciones');
       return false;
     }
 
@@ -126,17 +233,15 @@ export function RegisterForm({ onRegister, onBackToLogin, loading }: RegisterFor
 
   const handleSubmit = () => {
     if (validateForm()) {
-      onRegister({ 
-        name: `${firstName.trim()} ${lastName.trim()}`,
-        email: email.trim(), 
+      onRegister({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
         password,
-        // Agregar campos adicionales si es necesario
-        idNumber: idNumber.trim(),
-        phone: phone.trim(),
-        province: province.trim(),
-        city: city.trim(),
-        address: address.trim(),
-      } as any);
+        confirmPassword,
+        fotoCedula,
+        selfie,
+      });
     }
   };
 
@@ -248,14 +353,6 @@ export function RegisterForm({ onRegister, onBackToLogin, loading }: RegisterFor
             {renderInputField('lastName', 'Apellidos', 'Ingresa tus apellidos', 'user')}
           </View>
         </View>
-        <View style={styles.twoColumnRow}>
-          <View style={styles.halfColumn}>
-            {renderInputField('idNumber', 'Cédula/Pasaporte', '1234567890', 'id-card', 'numeric')}
-          </View>
-          <View style={styles.halfColumn}>
-            {renderInputField('phone', 'Teléfono', '0987654321', 'phone', 'phone-pad')}
-          </View>
-        </View>
       </View>
 
       {/* Correo Electrónico */}
@@ -264,22 +361,6 @@ export function RegisterForm({ onRegister, onBackToLogin, loading }: RegisterFor
           Correo Electrónico
         </ThemedText>
         {renderInputField('email', 'Correo Electrónico', 'usuario@ejemplo.com', 'envelope')}
-      </View>
-
-      {/* Ubicación */}
-      <View style={styles.section}>
-        <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
-          Ubicación
-        </ThemedText>
-        <View style={styles.twoColumnRow}>
-          <View style={styles.halfColumn}>
-            {renderInputField('province', 'Provincia', 'Selecciona tu provincia', 'map-marker')}
-          </View>
-          <View style={styles.halfColumn}>
-            {renderInputField('city', 'Ciudad', 'Ingresa la ciudad', 'map-marker')}
-          </View>
-        </View>
-        {renderInputField('address', 'Dirección', 'Calle, número, sector (opcional)', 'map-marker', 'default', false, false, false)}
       </View>
 
       {/* Seguridad */}
@@ -291,17 +372,102 @@ export function RegisterForm({ onRegister, onBackToLogin, loading }: RegisterFor
         {renderInputField('confirmPassword', 'Confirmar Contraseña', 'Repite tu contraseña', 'lock', 'default', true, true)}
       </View>
 
+      {/* Foto de Cédula */}
+      <View style={styles.section}>
+        <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
+          Foto de Cédula *
+        </ThemedText>
+        {fotoCedula ? (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{ uri: fotoCedula.uri }} style={styles.imagePreview} />
+            <TouchableOpacity
+              style={[styles.removeImageButton, { backgroundColor: colors.error }]}
+              onPress={() => handleRemoveImage('cedula')}
+              disabled={loading}
+            >
+              <FontAwesome name="trash" size={16} color={colors.white} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
+              onPress={() => showImageSourcePicker('cedula')}
+              disabled={loading}
+            >
+              <FontAwesome name="camera" size={16} color={colors.white} />
+              <ThemedText style={styles.changeImageText}>Cambiar</ThemedText>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.uploadButton,
+              { borderColor: errors.fotoCedula ? colors.error : colors.border }
+            ]}
+            onPress={() => showImageSourcePicker('cedula')}
+            disabled={loading}
+          >
+            <FontAwesome name="id-card" size={32} color={colors.primary} />
+            <ThemedText style={[styles.uploadButtonText, { color: colors.primary }]}>
+              Tomar o subir foto de cédula
+            </ThemedText>
+            <ThemedText style={[styles.uploadHint, { color: colors.textLight }]}>
+              Asegúrate que la foto sea clara y legible
+            </ThemedText>
+          </TouchableOpacity>
+        )}
+        {errors.fotoCedula && (
+          <ThemedText style={[styles.errorText, { color: colors.error }]}>
+            {errors.fotoCedula}
+          </ThemedText>
+        )}
+      </View>
+
       {/* Selfie para Verificación */}
       <View style={styles.section}>
         <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
-          Selfie para Verificación
+          Selfie para Verificación *
         </ThemedText>
-        <TouchableOpacity style={[styles.selfieButton, { borderColor: colors.border }]} disabled={loading}>
-          <IconSymbol name="camera" size={24} color={colors.primary} />
-          <ThemedText style={[styles.selfieButtonText, { color: colors.primary }]}>
-            Tomar o subir selfie
+        {selfie ? (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{ uri: selfie.uri }} style={styles.imagePreview} />
+            <TouchableOpacity
+              style={[styles.removeImageButton, { backgroundColor: colors.error }]}
+              onPress={() => handleRemoveImage('selfie')}
+              disabled={loading}
+            >
+              <FontAwesome name="trash" size={16} color={colors.white} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
+              onPress={() => showImageSourcePicker('selfie')}
+              disabled={loading}
+            >
+              <FontAwesome name="camera" size={16} color={colors.white} />
+              <ThemedText style={styles.changeImageText}>Cambiar</ThemedText>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.uploadButton,
+              { borderColor: errors.selfie ? colors.error : colors.border }
+            ]}
+            onPress={() => showImageSourcePicker('selfie')}
+            disabled={loading}
+          >
+            <FontAwesome name="camera" size={32} color={colors.primary} />
+            <ThemedText style={[styles.uploadButtonText, { color: colors.primary }]}>
+              Tomar o subir selfie
+            </ThemedText>
+            <ThemedText style={[styles.uploadHint, { color: colors.textLight }]}>
+              Tu rostro debe verse claramente
+            </ThemedText>
+          </TouchableOpacity>
+        )}
+        {errors.selfie && (
+          <ThemedText style={[styles.errorText, { color: colors.error }]}>
+            {errors.selfie}
           </ThemedText>
-        </TouchableOpacity>
+        )}
       </View>
 
       {/* Términos y Condiciones */}
@@ -445,20 +611,75 @@ const styles = StyleSheet.create({
     padding: 8,
     marginLeft: 8,
   },
-  selfieButton: {
-    flexDirection: 'row',
+  uploadButton: {
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
     borderStyle: 'dashed',
     borderRadius: 12,
-    paddingVertical: 20,
+    paddingVertical: 24,
     paddingHorizontal: 16,
     gap: 8,
+    backgroundColor: '#f8f9fa',
   },
-  selfieButtonText: {
+  uploadButtonText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
+    marginTop: 8,
+  },
+  uploadHint: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    resizeMode: 'cover',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  changeImageButton: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  changeImageText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   checkboxContainer: {
     flexDirection: 'row',

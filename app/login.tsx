@@ -19,14 +19,16 @@ export default function LoginScreen() {
 
   const handleLogin = async (credentials: LoginCredentials) => {
     setLoading(true);
-    
+
     try {
-      const response = await authService.login(credentials);
-      
-      if (response.success) {
-        Alert.alert('Éxito', 'Inicio de sesión exitoso');
+      const result = await authService.login(credentials);
+
+      if (result.success) {
+        Alert.alert('Éxito', result.message || 'Inicio de sesión exitoso');
+        // TODO: Navegar a la pantalla principal de la app
+        // router.replace('/(tabs)/home');
       } else {
-        Alert.alert('Error', response.message || 'Error al iniciar sesión');
+        Alert.alert('Error', result.message || 'Error al iniciar sesión');
       }
     } catch (error) {
       Alert.alert('Error', 'Error inesperado. Intenta nuevamente.');
