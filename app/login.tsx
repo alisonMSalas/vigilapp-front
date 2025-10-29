@@ -26,7 +26,7 @@ export default function LoginScreen() {
       if (result.success) {
         Alert.alert('Éxito', result.message || 'Inicio de sesión exitoso');
         const { router } = require('expo-router');
-        router.replace('/home');
+        router.replace('/location');
       } else {
         Alert.alert('Error', result.message || 'Error al iniciar sesión');
       }
