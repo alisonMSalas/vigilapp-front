@@ -133,7 +133,7 @@ export default function AlertsScreen() {
     } else if (tab === 'map') {
       // TODO: Navegar a mapa
     } else if (tab === 'create') {
-      // TODO: Navegar a crear alerta
+      router.push('/create-alert');
     }
     // Si es 'alerts', no hacer nada porque ya estamos aquí
   };
@@ -148,6 +148,10 @@ export default function AlertsScreen() {
     });
   };
 
+  const handleLogout = () => {
+    router.replace('/login');
+  };
+
   const stats = {
     total: 10,
     active: 6,
@@ -158,7 +162,7 @@ export default function AlertsScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <TopHeader notificationsCount={3} />
+        <TopHeader notificationsCount={3} onLogout={handleLogout} />
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
           {/* Filters Section */}

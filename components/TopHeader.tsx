@@ -1,13 +1,14 @@
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Feather } from '@expo/vector-icons';
-import React from 'react';
+import React, { useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 export type TopHeaderProps = {
   style?: ViewStyle;
   onPressNotifications?: () => void;
   onPressProfile?: () => void;
+  onLogout?: () => void;
   notificationsCount?: number;
   logo?: any; // require('path') or { uri }
 };
@@ -16,39 +17,75 @@ export default function TopHeader({
   style,
   onPressNotifications,
   onPressProfile,
+  onLogout,
   notificationsCount = 0,
   logo,
 }: TopHeaderProps) {
   const scheme = useColorScheme();
   const palette = scheme === 'dark' ? Colors.dark : Colors.light;
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const showBadge = typeof notificationsCount === 'number' && notificationsCount > 0;
 
+  const handleProfilePress = () => {
+    setShowProfileMenu(!showProfileMenu);
+    if (onPressProfile) {
+      onPressProfile();
+    }
+  };
+
+  const handleLogout = () => {
+    setShowProfileMenu(false);
+    if (onLogout) {
+      onLogout();
+    }
+  };
+
   return (
-    <View style={[styles.wrapper, { backgroundColor: palette.background }, style]}>
-      <View style={styles.left}>
-        {logo ? (
-          <Image source={logo} style={styles.logo} resizeMode="contain" />
-        ) : (
-          <Text style={[styles.brand, { color: '#005677' }]}>VigilApp</Text>
-        )}
-      </View>
-
-      <View style={styles.right}>
-        <TouchableOpacity accessibilityRole="button" onPress={onPressNotifications} style={styles.iconButton}>
-          <Feather name="bell" size={22} color={palette.icon} />
-          {showBadge && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{Math.min(notificationsCount, 99)}</Text>
-            </View>
+    <>
+      {showProfileMenu && (
+        <TouchableOpacity
+          style={styles.overlay}
+          onPress={() => setShowProfileMenu(false)}
+          activeOpacity={1}
+        />
+      )}
+      <View style={[styles.wrapper, { backgroundColor: palette.background }, style]}>
+        <View style={styles.left}>
+          {logo ? (
+            <Image source={logo} style={styles.logo} resizeMode="contain" />
+          ) : (
+            <Text style={[styles.brand, { color: '#005677' }]}>VigilApp</Text>
           )}
-        </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity accessibilityRole="button" onPress={onPressProfile} style={styles.iconButton}>
-          <Feather name="user" size={22} color={palette.icon} />
-        </TouchableOpacity>
+        <View style={styles.right}>
+          <TouchableOpacity accessibilityRole="button" onPress={onPressNotifications} style={styles.iconButton}>
+            <Feather name="bell" size={22} color={palette.icon} />
+            {showBadge && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{Math.min(notificationsCount, 99)}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.profileContainer}>
+            <TouchableOpacity accessibilityRole="button" onPress={handleProfilePress} style={styles.iconButton}>
+              <Feather name="user" size={22} color={palette.icon} />
+            </TouchableOpacity>
+
+            {showProfileMenu && (
+              <View style={styles.menu}>
+                <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+                  <Feather name="log-out" size={18} color="#f44336" />
+                  <Text style={styles.menuText}>Cerrar sesión</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
       </View>
-    </View>
+    </>
   );
 }
 
@@ -99,6 +136,46 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: '700',
+  },
+  profileContainer: {
+    position: 'relative',
+    zIndex: 1000,
+  },
+  menu: {
+    position: 'absolute',
+    top: 40,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    minWidth: 160,
+    zIndex: 1001,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 8,
+  },
+  menuText: {
+    fontSize: 16,
+    color: '#f44336',
+    fontWeight: '600',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    zIndex: 999,
   },
 });
 

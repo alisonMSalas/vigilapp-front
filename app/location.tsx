@@ -3,7 +3,7 @@ import { ShieldIcon } from '@/components/ShieldIcon';
 import { ThemedText } from '@/components/themed-text';
 import { Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -42,6 +42,8 @@ export default function LocationScreen() {
     lng: -78.6186,
   });
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const returnTo = params.returnTo as string;
 
   // Buscar direcciones usando Nominatim API
   const searchAddresses = async (query: string) => {
@@ -128,11 +130,48 @@ export default function LocationScreen() {
       
       console.log('Ubicación obtenida:', { latitude, longitude });
 
-      // TODO: Guardar ubicación en storage o enviar al backend
-      // await saveLocationToStorage({ latitude, longitude });
-      
-      // Navegar a la pantalla principal
-      router.replace('/home');
+      // Obtener la dirección mediante reverse geocoding
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+          {
+            headers: { 'User-Agent': 'VigilApp/1.0' },
+          }
+        );
+        const data = await response.json();
+        const address = data.display_name || 'Ubicación actual';
+        
+        // Navegar según el origen
+        if (returnTo === 'create-alert') {
+          router.push({
+            pathname: '/create-alert',
+            params: {
+              address: address,
+              lat: latitude.toString(),
+              lon: longitude.toString(),
+            },
+          });
+        } else {
+          // TODO: Guardar ubicación en storage o enviar al backend
+          // await saveLocationToStorage({ latitude, longitude });
+          router.replace('/home');
+        }
+      } catch (geocodeError) {
+        console.error('Error obteniendo dirección:', geocodeError);
+        // Si falla el geocoding, navegar igual con coordenadas
+        if (returnTo === 'create-alert') {
+          router.push({
+            pathname: '/create-alert',
+            params: {
+              address: `Lat: ${latitude}, Lon: ${longitude}`,
+              lat: latitude.toString(),
+              lon: longitude.toString(),
+            },
+          });
+        } else {
+          router.replace('/home');
+        }
+      }
       
     } catch (error) {
       console.error('Error obteniendo ubicación:', error);
@@ -197,7 +236,19 @@ export default function LocationScreen() {
     // TODO: Guardar en storage o enviar al backend
     // await saveLocationToStorage({ latitude: lat, longitude: lon });
     
-    router.replace('/home');
+    // Navegar a la pantalla correcta según el origen
+    if (returnTo === 'create-alert') {
+      router.push({
+        pathname: '/create-alert',
+        params: {
+          address: selectedAddress.display_name,
+          lat: lat.toString(),
+          lon: lon.toString(),
+        },
+      });
+    } else {
+      router.replace('/home');
+    }
   };
 
   const handleMapPress = (event: any) => {

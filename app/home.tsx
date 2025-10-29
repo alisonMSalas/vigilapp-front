@@ -71,13 +71,13 @@ export default function HomeScreen() {
     setActive(tab);
     if (tab === 'alerts') {
       router.push('/alerts');
+    } else if (tab === 'create') {
+      router.push('/create-alert');
     }
-    // TODO: Navegar a otras pantallas principales cuando existan
   };
 
   const handleReportIncident = () => {
-    // TODO: Implementar navegación a pantalla de reportar
-    console.log('Reportar incidencia');
+    router.push('/create-alert');
   };
 
   const handleViewMap = () => {
@@ -99,6 +99,14 @@ export default function HomeScreen() {
     });
   };
 
+  const handleProfilePress = () => {
+    // El menú se maneja dentro del componente TopHeader
+  };
+
+  const handleLogout = () => {
+    router.replace('/login');
+  };
+
   const getAlertIconColor = (type: AlertData['type']) => {
     switch (type) {
       case 'warning':
@@ -115,7 +123,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <TopHeader notificationsCount={3} />
+        <TopHeader notificationsCount={3} onLogout={handleLogout} />
         
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
           {/* Blue Header Section */}
