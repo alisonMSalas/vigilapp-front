@@ -1,18 +1,19 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    View
 } from 'react-native';
 
 import { LoginForm } from '@/components/auth/LoginForm';
 import { ShieldIcon } from '@/components/ShieldIcon';
 import { ThemedText } from '@/components/themed-text';
 import { authService, LoginCredentials } from '@/services/auth.service';
+import { userZoneService } from '@/services/user-zone.service';
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
@@ -25,8 +26,18 @@ export default function LoginScreen() {
 
       if (result.success) {
         Alert.alert('Éxito', result.message || 'Inicio de sesión exitoso');
-        // TODO: Navegar a la pantalla principal de la app
-        // router.replace('/(tabs)/home');
+        const { router } = require('expo-router');
+
+        // Verificar si el usuario ya tiene configurado su user_zone
+        const userZone = await userZoneService.getUserZone();
+
+        if (userZone) {
+          // Si ya tiene zona configurada, ir directo a home
+          router.replace('/home');
+        } else {
+          // Si no tiene zona, mostrar pantalla de configuración
+          router.replace('/location');
+        }
       } else {
         Alert.alert('Error', result.message || 'Error al iniciar sesión');
       }

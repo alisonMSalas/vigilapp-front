@@ -6,8 +6,8 @@
 // URL base del backend Spring Boot
 // TODO: Cambiar a la IP/URL real del servidor en producción
 export const API_CONFIG = {
-  BASE_URL: 'http://10.79.2.178:8080/api',
-  TIMEOUT: 30000, // 30 segundos timeout para uploads de imágenes
+  BASE_URL: 'http://192.168.100.6:8080/api',
+  TIMEOUT: 30000,
 } as const;
 
 /**
@@ -31,6 +31,38 @@ export const getJsonHeaders = (token?: string | null): HeadersInit => {
     ...getCommonHeaders(token),
     'Content-Type': 'application/json',
   };
+};
+
+/**
+ * Crea headers con token de autenticación desde el almacenamiento
+ * Uso: await createHeaders('json') o await createHeaders()
+ */
+export const createHeaders = async (type?: 'json'): Promise<HeadersInit> => {
+  console.log("[API_CONFIG] 🔑 createHeaders called, type:", type);
+  try {
+    // Importar dinámicamente para evitar dependencia circular
+    console.log("[API_CONFIG] 📥 Importing authService...");
+    const { authService } = await import('../auth.service');
+    console.log("[API_CONFIG] ✅ authService imported");
+    
+    console.log("[API_CONFIG] 🔍 Getting stored token...");
+    const token = await authService.getStoredToken();
+    console.log("[API_CONFIG] 🎟️ Token retrieved:", token ? `${token.substring(0, 20)}...` : "NULL");
+    
+    if (type === 'json') {
+      const headers = getJsonHeaders(token);
+      console.log("[API_CONFIG] 📦 Returning JSON headers");
+      return headers;
+    }
+    
+    const headers = getCommonHeaders(token);
+    console.log("[API_CONFIG] 📦 Returning common headers");
+    return headers;
+  } catch (error) {
+    console.error('[API Config] Error getting auth token:', error);
+    // Retornar headers sin token si hay error
+    return type === 'json' ? { 'Content-Type': 'application/json' } : {};
+  }
 };
 
 /**
