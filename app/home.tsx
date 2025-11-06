@@ -13,7 +13,8 @@ import {
 } from "@/services/websocket.service";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -80,6 +81,14 @@ export default function HomeScreen() {
       webSocketService.disconnect();
     };
   }, []);
+
+  // Recargar datos cuando la pantalla recupera el foco
+  useFocusEffect(
+    useCallback(() => {
+      console.log("[Home] 🔄 Pantalla enfocada, recargando datos...");
+      loadInitialData();
+    }, [])
+  );
 
   const loadInitialData = async () => {
     try {

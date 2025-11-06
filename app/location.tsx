@@ -1,6 +1,7 @@
 import MapWrapper, { MapMarker } from '@/components/MapWrapper';
 import { ShieldIcon } from '@/components/ShieldIcon';
 import { ThemedText } from '@/components/themed-text';
+import { locationCacheService } from '@/services/location-cache.service';
 import { userZoneService, SaveUserZoneDto } from '@/services/user-zone.service';
 import { Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -16,6 +17,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Address {
@@ -32,6 +34,7 @@ export default function LocationScreen() {
   const [searchResults, setSearchResults] = useState<Address[]>([]);
   const [searching, setSearching] = useState(false);
   const [isManualSearch, setIsManualSearch] = useState(false);
+  const [radiusM, setRadiusM] = useState(5000); // Radio por defecto de 5km
   const [mapRegion, setMapRegion] = useState({
     latitude: -1.2476,
     longitude: -78.6186,
@@ -144,14 +147,13 @@ export default function LocationScreen() {
         
         // Navegar según el origen
         if (returnTo === 'create-alert') {
-          router.push({
-            pathname: '/create-alert',
-            params: {
-              address: address,
-              lat: latitude.toString(),
-              lon: longitude.toString(),
-            },
+          // Guardar en cache y volver a create-alert preservando su estado
+          locationCacheService.setLocation({
+            address: address,
+            lat: latitude,
+            lon: longitude,
           });
+          router.back();
         } else {
           // Guardar zona en el backend con radio por defecto de 5000m
           console.log("[Location] 💾 Guardando zona en el backend...");
@@ -161,7 +163,7 @@ export default function LocationScreen() {
             const zoneData: SaveUserZoneDto = {
               centerLatitude: latitude,
               centerLongitude: longitude,
-              radiusM: 5000, // Radio por defecto
+              radiusM: Math.round(radiusM),
             };
             
             console.log("[Location] 📤 Llamando userZoneService.saveUserZone con:", zoneData);
@@ -183,14 +185,12 @@ export default function LocationScreen() {
         console.error('Error obteniendo dirección:', geocodeError);
         // Si falla el geocoding, navegar igual con coordenadas
         if (returnTo === 'create-alert') {
-          router.push({
-            pathname: '/create-alert',
-            params: {
-              address: `Lat: ${latitude}, Lon: ${longitude}`,
-              lat: latitude.toString(),
-              lon: longitude.toString(),
-            },
+          locationCacheService.setLocation({
+            address: `Lat: ${latitude}, Lon: ${longitude}`,
+            lat: latitude,
+            lon: longitude,
           });
+          router.back();
         } else {
           router.replace('/home');
         }
@@ -258,14 +258,13 @@ export default function LocationScreen() {
 
     // Navegar a la pantalla correcta según el origen
     if (returnTo === 'create-alert') {
-      router.push({
-        pathname: '/create-alert',
-        params: {
-          address: selectedAddress.display_name,
-          lat: lat.toString(),
-          lon: lon.toString(),
-        },
+      // Guardar en cache y volver a create-alert preservando su estado
+      locationCacheService.setLocation({
+        address: selectedAddress.display_name,
+        lat: typeof lat === 'number' ? lat : parseFloat(lat),
+        lon: typeof lon === 'number' ? lon : parseFloat(lon),
       });
+      router.back();
     } else {
       // Guardar zona en el backend con radio por defecto de 5000m
       setLoading(true);
@@ -276,7 +275,7 @@ export default function LocationScreen() {
         const zoneData: SaveUserZoneDto = {
           centerLatitude: typeof lat === 'number' ? lat : parseFloat(lat),
           centerLongitude: typeof lon === 'number' ? lon : parseFloat(lon),
-          radiusM: 5000, // Radio por defecto
+          radiusM: Math.round(radiusM),
         };
         
         console.log("[Location] 📤 Llamando userZoneService.saveUserZone con:", zoneData);
@@ -355,41 +354,58 @@ export default function LocationScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <ShieldIcon size={64} color="#005677" />
-          <ThemedText style={styles.title}>Configura tu Ubicación</ThemedText>
-          <ThemedText style={styles.subtitle}>
-            Para proporcionarte alertas relevantes y mantenerte informado sobre tu zona, necesitamos conocer tu ubicación
-          </ThemedText>
+            {returnTo === 'create-alert' ? (
+              <>
+                <View style={styles.backButtonContainer}>
+                  <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <Feather name="arrow-left" size={24} color="#005677" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.iconContainer}>
+                  <View style={styles.iconCircle}>
+                    <Feather name="map-pin" size={40} color="#005677" />
+                  </View>
+                </View>
+                <ThemedText style={styles.title}>¿Dónde ocurrió?</ThemedText>
+                <ThemedText style={styles.subtitle}>
+                  Selecciona la ubicación exacta del incidente para ayudar a tu comunidad
+                </ThemedText>
+              </>
+            ) : (
+              <>
+                <ShieldIcon size={64} color="#005677" />
+                <ThemedText style={styles.title}>Configura tu Ubicación</ThemedText>
+                <ThemedText style={styles.subtitle}>
+                  Para proporcionarte alertas relevantes y mantenerte informado sobre tu zona, necesitamos conocer tu ubicación
+                </ThemedText>
+              </>
+            )}
         </View>
 
-        <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            <View style={styles.iconCircle}>
-              <Feather name="map-pin" size={48} color="#005677" />
+          {returnTo !== 'create-alert' && (
+            <View style={styles.content}>
+              <View style={styles.infoCard}>
+                <View style={styles.infoItem}>
+                  <Feather name="shield" size={20} color="#005677" />
+                  <ThemedText style={styles.infoText}>
+                    Recibe alertas de seguridad en tu área
+                  </ThemedText>
+                </View>
+                <View style={styles.infoItem}>
+                  <Feather name="users" size={20} color="#005677" />
+                  <ThemedText style={styles.infoText}>
+                    Conéctate con vecinos cercanos
+                  </ThemedText>
+                </View>
+                <View style={styles.infoItem}>
+                  <Feather name="map" size={20} color="#005677" />
+                  <ThemedText style={styles.infoText}>
+                    Visualiza incidentes en el mapa
+                  </ThemedText>
+                </View>
+              </View>
             </View>
-          </View>
-
-          <View style={styles.infoCard}>
-            <View style={styles.infoItem}>
-              <Feather name="shield" size={20} color="#005677" />
-              <ThemedText style={styles.infoText}>
-                Recibe alertas de seguridad en tu área
-              </ThemedText>
-            </View>
-            <View style={styles.infoItem}>
-              <Feather name="users" size={20} color="#005677" />
-              <ThemedText style={styles.infoText}>
-                Conéctate con vecinos cercanos
-              </ThemedText>
-            </View>
-            <View style={styles.infoItem}>
-              <Feather name="map" size={20} color="#005677" />
-              <ThemedText style={styles.infoText}>
-                Visualiza incidentes en el mapa
-              </ThemedText>
-            </View>
-          </View>
-        </View>
+          )}
 
         <View style={styles.footer}>
           <TouchableOpacity
@@ -490,6 +506,36 @@ export default function LocationScreen() {
               </TouchableOpacity>
             ) : null}
           </View>
+
+          {/* Radio de alerta - solo mostrar cuando NO es para create-alert */}
+          {returnTo !== 'create-alert' && (
+            <View style={styles.radiusSection}>
+              <View style={styles.radiusSectionHeader}>
+                <ThemedText style={styles.radiusSectionTitle}>Radio de Alerta</ThemedText>
+                <View style={styles.radiusValueContainer}>
+                  <ThemedText style={styles.radiusValue}>{Math.round(radiusM)}m</ThemedText>
+                  <ThemedText style={styles.radiusSubValue}>
+                    ({(radiusM / 1000).toFixed(1)} km)
+                  </ThemedText>
+                </View>
+              </View>
+              <Slider
+                style={styles.slider}
+                minimumValue={100}
+                maximumValue={50000}
+                step={100}
+                value={radiusM}
+                onValueChange={setRadiusM}
+                minimumTrackTintColor="#005677"
+                maximumTrackTintColor="#e0e0e0"
+                thumbTintColor="#005677"
+              />
+              <View style={styles.radiusLabels}>
+                <ThemedText style={styles.radiusLabel}>100m</ThemedText>
+                <ThemedText style={styles.radiusLabel}>50km</ThemedText>
+              </View>
+            </View>
+          )}
 
           {/* Resultados de búsqueda */}
           {searchResults.length > 0 ? (
@@ -819,4 +865,58 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+    backButtonContainer: {
+      alignSelf: 'flex-start',
+      marginBottom: 16,
+    },
+    backButton: {
+      padding: 8,
+      borderRadius: 8,
+      backgroundColor: '#f0f8ff',
+    },
+    radiusSection: {
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: '#f8f9fa',
+      borderBottomWidth: 1,
+      borderBottomColor: '#e0e0e0',
+    },
+    radiusSectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    radiusSectionTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#333',
+    },
+    radiusValueContainer: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 6,
+    },
+    radiusValue: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: '#005677',
+    },
+    radiusSubValue: {
+      fontSize: 14,
+      color: '#666',
+    },
+    slider: {
+      width: '100%',
+      height: 40,
+    },
+    radiusLabels: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingHorizontal: 4,
+    },
+    radiusLabel: {
+      fontSize: 12,
+      color: '#999',
+    },
 });

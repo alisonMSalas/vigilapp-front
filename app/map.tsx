@@ -109,15 +109,19 @@ export default function MapScreen() {
   };
 
   // Obtener color según intensidad (0-1) y cantidad de alertas
-  const getColorForIntensity = (intensity: number, count: number): string => {
-    console.log(intensity, count);
-    // Si solo hay 1 alerta, usar verde claro
-    if (count === 1) return "rgba(76, 175, 80, 0.3)";
+  const getColorForIntensity = (intensity: number, count?: number): string => {
+    console.log("Intensity:", intensity, "Count:", count);
+    
+    // Si count está disponible, usarlo como criterio principal
+    if (count !== undefined) {
+      if (count === 1) return "rgba(76, 175, 80, 0.3)"; // Verde para 1 alerta
+      if (count <= 3) return "rgba(255, 235, 59, 0.4)"; // Amarillo para 2-3
+      if (count <= 5) return "rgba(255, 152, 0, 0.5)"; // Naranja para 4-5
+      if (count <= 10) return "rgba(255, 87, 34, 0.6)"; // Naranja oscuro para 6-10
+      return "rgba(244, 67, 54, 0.7)"; // Rojo para más de 10
+    }
 
-    // Para 2-3 alertas, amarillo
-    if (count <= 3) return "rgba(255, 235, 59, 0.4)";
-
-    // Para más alertas, usar escala basada en intensidad
+    // Si no hay count, usar solo intensidad
     if (intensity < 0.3) return "rgba(76, 175, 80, 0.3)"; // Verde
     if (intensity < 0.5) return "rgba(255, 235, 59, 0.4)"; // Amarillo
     if (intensity < 0.7) return "rgba(255, 152, 0, 0.5)"; // Naranja

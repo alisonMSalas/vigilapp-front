@@ -1,8 +1,10 @@
 import { ThemedText } from '@/components/themed-text';
 import { alertService, AlertCategory } from '@/services/alert.service';
+import { locationCacheService } from '@/services/location-cache.service';
 import { Feather } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -81,6 +83,21 @@ export default function CreateAlertScreen() {
     }
   }, [params.address, params.lat, params.lon]);
 
+  // Leer ubicación del cache cuando vuelve el foco (después de seleccionar en location)
+  useFocusEffect(
+    useCallback(() => {
+      if (locationCacheService.hasLocation()) {
+        const location = locationCacheService.getAndClearLocation();
+        if (location) {
+          setLocationAddress(location.address);
+          setLatitude(location.lat);
+          setLongitude(location.lon);
+          console.log('[CreateAlert] 📍 Ubicación recuperada del cache:', location);
+        }
+      }
+    }, [])
+  );
+
   const handleOpenLocationPicker = () => {
     router.push({
       pathname: '/location',
@@ -102,6 +119,11 @@ export default function CreateAlertScreen() {
   const handlePublish = async () => {
     if (!selectedType || !title || !description) {
       Alert.alert('Error', 'Por favor completa todos los campos requeridos');
+      return;
+    }
+
+    if (description.trim().length < 10) {
+      Alert.alert('Error', 'La descripción debe tener al menos 10 caracteres');
       return;
     }
 
@@ -153,7 +175,7 @@ export default function CreateAlertScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Feather name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>
-          <ThemedText style={styles.headerTitle}>Nueva Publicación</ThemedText>
+          <ThemedText style={styles.headerTitle}>Nueva Alerta</ThemedText>
           <TouchableOpacity
             style={[styles.publishButton, (!canPublish || publishing) && styles.publishButtonDisabled]}
             disabled={!canPublish || publishing}
@@ -242,7 +264,7 @@ export default function CreateAlertScreen() {
             <View style={styles.inputContainer}>
               <TextInput
                 style={[styles.input, styles.descriptionInput]}
-                placeholder="Describe la situación con más detalles..."
+                placeholder="Describe la situación con más detalles (mínimo 10 caracteres)..."
                 placeholderTextColor="#999"
                 value={description}
                 onChangeText={setDescription}
@@ -250,7 +272,9 @@ export default function CreateAlertScreen() {
                 multiline
                 textAlignVertical="top"
               />
-              <ThemedText style={styles.counter}>{description.length}/500</ThemedText>
+              <ThemedText style={[styles.counter, description.length < 10 && styles.counterError]}>
+                {description.length}/500 {description.length < 10 && '(mínimo 10)'}
+              </ThemedText>
             </View>
           </View>
 
@@ -266,28 +290,51 @@ export default function CreateAlertScreen() {
 
           {/* Location */}
           <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Ubicación</ThemedText>
-            <TouchableOpacity 
-              style={styles.locationInputContainer}
-              onPress={handleOpenLocationPicker}
-            >
-              {locationAddress ? (
-                <ThemedText style={styles.locationText}>{locationAddress}</ThemedText>
+              <ThemedText style={styles.sectionTitle}>Ubicación *</ThemedText>
+            
+              {locationAddress && latitude && longitude ? (
+                <View style={styles.locationCard}>
+                  <View style={styles.locationInfo}>
+                    <View style={styles.locationIconCircle}>
+                      <Feather name="map-pin" size={20} color="#005677" />
+                    </View>
+                    <View style={styles.locationTextContainer}>
+                      <ThemedText style={styles.locationLabel}>Ubicación seleccionada</ThemedText>
+                      <ThemedText style={styles.locationAddress} numberOfLines={2}>
+                        {locationAddress}
+                      </ThemedText>
+                      <ThemedText style={styles.locationCoords}>
+                        {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.changeLocationButton}
+                    onPress={handleOpenLocationPicker}
+                  >
+                    <Feather name="edit-2" size={16} color="#005677" />
+                    <ThemedText style={styles.changeLocationText}>Cambiar</ThemedText>
+                  </TouchableOpacity>
+                </View>
               ) : (
-                <ThemedText style={styles.locationPlaceholder}>
-                  Ej: Av. Principal esquina con 12 de Noviembre
-                </ThemedText>
+                <TouchableOpacity 
+                  style={styles.selectLocationButton} 
+                  onPress={handleOpenLocationPicker}
+                >
+                  <View style={styles.selectLocationContent}>
+                    <Feather name="map-pin" size={24} color="#005677" />
+                    <View style={styles.selectLocationTextContainer}>
+                      <ThemedText style={styles.selectLocationTitle}>
+                        Seleccionar ubicación
+                      </ThemedText>
+                      <ThemedText style={styles.selectLocationSubtitle}>
+                        Toca para elegir dónde ocurrió el incidente
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <Feather name="chevron-right" size={24} color="#999" />
+                </TouchableOpacity>
               )}
-              <Feather name="map-pin" size={20} color="#005677" />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.locationButton} 
-              onPress={handleOpenLocationPicker}
-            >
-              <Feather name="crosshair" size={20} color="#fff" />
-              <ThemedText style={styles.locationButtonText}>Seleccionar ubicación</ThemedText>
-            </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
@@ -440,6 +487,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
   },
+  counterError: {
+    color: '#f44336',
+    fontWeight: '600',
+  },
   photoArea: {
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
@@ -498,5 +549,91 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+    locationCard: {
+      backgroundColor: '#f0f8ff',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#005677',
+      padding: 16,
+    },
+    locationInfo: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 12,
+    },
+    locationIconCircle: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: '#fff',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    locationTextContainer: {
+      flex: 1,
+    },
+    locationLabel: {
+      fontSize: 12,
+      color: '#005677',
+      fontWeight: '600',
+      marginBottom: 4,
+    },
+    locationAddress: {
+      fontSize: 15,
+      color: '#333',
+      fontWeight: '500',
+      marginBottom: 4,
+    },
+    locationCoords: {
+      fontSize: 12,
+      color: '#666',
+    },
+    changeLocationButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: '#fff',
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: '#005677',
+    },
+    changeLocationText: {
+      color: '#005677',
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    selectLocationButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: '#f8f9fa',
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: '#005677',
+      borderStyle: 'dashed',
+      padding: 20,
+    },
+    selectLocationContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+      flex: 1,
+    },
+    selectLocationTextContainer: {
+      flex: 1,
+    },
+    selectLocationTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#005677',
+      marginBottom: 4,
+    },
+    selectLocationSubtitle: {
+      fontSize: 14,
+      color: '#666',
+    },
 });
 
