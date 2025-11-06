@@ -49,6 +49,15 @@ export default function LocationScreen() {
   const params = useLocalSearchParams();
   const returnTo = params.returnTo as string;
 
+  // Función helper para navegar hacia atrás de forma segura
+  const safeGoBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/home');
+    }
+  };
+
   // Buscar direcciones usando Nominatim API
   const searchAddresses = async (query: string) => {
     if (!query || query.length < 3) {
@@ -153,7 +162,7 @@ export default function LocationScreen() {
             lat: latitude,
             lon: longitude,
           });
-          router.back();
+          safeGoBack();
         } else {
           // Guardar zona en el backend con radio por defecto de 5000m
           console.log("[Location] 💾 Guardando zona en el backend...");
@@ -190,7 +199,7 @@ export default function LocationScreen() {
             lat: latitude,
             lon: longitude,
           });
-          router.back();
+          safeGoBack();
         } else {
           router.replace('/home');
         }
@@ -357,7 +366,7 @@ export default function LocationScreen() {
             {returnTo === 'create-alert' ? (
               <>
                 <View style={styles.backButtonContainer}>
-                  <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                  <TouchableOpacity onPress={safeGoBack} style={styles.backButton}>
                     <Feather name="arrow-left" size={24} color="#005677" />
                   </TouchableOpacity>
                 </View>
@@ -462,7 +471,7 @@ export default function LocationScreen() {
         presentationStyle="fullScreen"
         onRequestClose={() => setShowManualPicker(false)}
       >
-        <SafeAreaView style={styles.modalContainer}>
+        <SafeAreaView style={styles.modalContainer} edges={['top', 'left', 'right']}>
           <View style={styles.modalHeader}>
             <TouchableOpacity
               onPress={() => setShowManualPicker(false)}
@@ -478,6 +487,7 @@ export default function LocationScreen() {
             </TouchableOpacity>
           </View>
 
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
           <View style={styles.searchContainer}>
             <Feather name="search" size={20} color="#666" />
             <TextInput
@@ -540,23 +550,21 @@ export default function LocationScreen() {
           {/* Resultados de búsqueda */}
           {searchResults.length > 0 ? (
             <View style={styles.searchResultsContainer}>
-              <ScrollView style={styles.searchResults}>
-                {searchResults.map((result, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.resultItem}
-                    onPress={() => handleSelectAddress(result)}
-                  >
-                    <Feather name="map-pin" size={18} color="#005677" />
-                    <View style={styles.resultText}>
-                      <ThemedText style={styles.resultTitle}>
-                        {result.display_name}
-                      </ThemedText>
-                    </View>
-                    <Feather name="chevron-right" size={20} color="#ccc" />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              {searchResults.map((result, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.resultItem}
+                  onPress={() => handleSelectAddress(result)}
+                >
+                  <Feather name="map-pin" size={18} color="#005677" />
+                  <View style={styles.resultText}>
+                    <ThemedText style={styles.resultTitle}>
+                      {result.display_name}
+                    </ThemedText>
+                  </View>
+                  <Feather name="chevron-right" size={20} color="#ccc" />
+                </TouchableOpacity>
+              ))}
             </View>
           ) : isManualSearch && searchText.length >= 3 && !searching && searchResults.length === 0 ? (
             <View style={styles.noResultsContainer}>
@@ -596,6 +604,7 @@ export default function LocationScreen() {
               </ThemedText>
             </View>
           )}
+          </ScrollView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -736,6 +745,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
+  modalContent: {
+    flex: 1,
+  },
   closeButton: {
     padding: 8,
   },
@@ -803,13 +815,9 @@ const styles = StyleSheet.create({
     color: '#ccc',
   },
   searchResultsContainer: {
-    maxHeight: 150,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-  },
-  searchResults: {
-    flexGrow: 0,
   },
   resultItem: {
     flexDirection: 'row',
@@ -828,7 +836,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   mapContainer: {
-    flex: 1,
+    height: 300, // Altura fija para evitar overflow en iPhone
   },
   map: {
     flex: 1,

@@ -46,6 +46,15 @@ export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  // Función helper para navegar hacia atrás de forma segura
+  const safeGoBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/home');
+    }
+  };
+
   // Cargar configuración actual al montar
   useEffect(() => {
     loadCurrentZone();
@@ -234,7 +243,7 @@ export default function SettingsScreen() {
       Alert.alert(
         'Éxito',
         'Configuración guardada correctamente',
-        [{ text: 'OK', onPress: () => router.back() }]
+        [{ text: 'OK', onPress: safeGoBack }]
       );
     } catch (error) {
       console.error('[Settings] ❌ Error saving configuration:', error);
@@ -250,7 +259,7 @@ export default function SettingsScreen() {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={safeGoBack} style={styles.backButton}>
             <Feather name="arrow-left" size={24} color="#005677" />
           </TouchableOpacity>
           <ThemedText style={styles.title}>Configuración de Zona</ThemedText>

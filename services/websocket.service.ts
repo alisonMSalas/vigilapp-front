@@ -1,4 +1,5 @@
 import { authService } from './auth.service';
+import { API_CONFIG } from './config/api.config';
 
 export interface AlertNotification {
   event: 'NEW_ALERT';
@@ -44,7 +45,13 @@ class WebSocketService {
       }
 
       // Conectar al endpoint WebSocket
-      const wsUrl = 'ws://192.168.100.6:8080/ws/alerts';
+      // Convertir URL HTTP a WebSocket (http:// → ws://, https:// → wss://)
+      const wsUrl = API_CONFIG.BASE_URL
+        .replace('http://', 'ws://')
+        .replace('https://', 'wss://')
+        .replace('/api', '') + '/ws/alerts';
+
+      console.log('[WebSocket] 🔌 Intentando conectar a:', wsUrl);
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
@@ -52,7 +59,6 @@ class WebSocketService {
         this.isConnected = true;
         this.reconnectAttempts = 0;
 
-        // Registrar usuario en el servidor si tenemos ID
         if (this.userId) {
           this.registerUser();
         }
@@ -60,18 +66,49 @@ class WebSocketService {
 
       this.ws.onmessage = (event) => {
         try {
-          const message: AlertNotification = JSON.parse(event.data);
+          const message = JSON.parse(event.data);
           console.log('[WebSocket] 📨 Mensaje recibido:', message);
 
-          // Notificar a todos los callbacks
-          this.messageCallbacks.forEach(callback => callback(message));
+          // Manejar mensajes de control del servidor
+          if (message.type === 'CONNECTION_ESTABLISHED') {
+            console.log('[WebSocket] ✅ Servidor confirmó conexión');
+            return;
+          }
+
+          if (message.type === 'REGISTERED') {
+            console.log('[WebSocket] ✅ Usuario registrado en el servidor');
+            return;
+          }
+
+          if (message.type === 'ERROR') {
+            console.error('[WebSocket] ❌ Error del servidor:', message.message);
+            return;
+          }
+
+          // Procesar notificación de alerta
+          if (message.event === 'NEW_ALERT') {
+            // Notificar a todos los callbacks
+            this.messageCallbacks.forEach(callback => callback(message as AlertNotification));
+          }
         } catch (error) {
           console.error('[WebSocket] ❌ Error parsing message:', error);
         }
       };
 
       this.ws.onerror = (error) => {
-        console.error('[WebSocket] ❌ Error:', error);
+        console.error('[WebSocket] ❌ Error de conexión:', {
+          error: error,
+          readyState: this.ws?.readyState,
+          url: wsUrl,
+        });
+
+        // Solo mostrar consejos si es el primer intento
+        if (this.reconnectAttempts === 0) {
+          console.log('[WebSocket] 💡 Verifica que:');
+          console.log('  1. El backend está corriendo');
+          console.log('  2. La URL es correcta:', wsUrl);
+          console.log('  3. No hay firewall bloqueando WebSocket');
+        }
       };
 
       this.ws.onclose = () => {
@@ -89,6 +126,12 @@ class WebSocketService {
    */
   private registerUser(): void {
     if (!this.isConnected || !this.ws || !this.userId) {
+      console.log('[WebSocket] ⚠️ No se puede registrar: conexión no lista');
+      return;
+    }
+
+    if (this.ws.readyState !== WebSocket.OPEN) {
+      console.log('[WebSocket] ⚠️ WebSocket no está abierto, estado:', this.ws.readyState);
       return;
     }
 
@@ -98,7 +141,7 @@ class WebSocketService {
     });
 
     this.ws.send(registerMessage);
-    console.log('Usuario registrado en WebSocket');
+    console.log('[WebSocket] ✅ Usuario registrado en WebSocket');
   }
 
   /**
@@ -106,14 +149,14 @@ class WebSocketService {
    */
   private attemptReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('Máximo de intentos de reconexión alcanzado');
+      console.log('[WebSocket] ⚠️ Máximo de intentos de reconexión alcanzado');
       return;
     }
 
     this.reconnectAttempts++;
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
 
-    console.log(`Reintentando conexión en ${delay}ms (intento ${this.reconnectAttempts})`);
+    console.log(`[WebSocket] 🔄 Reintentando conexión en ${delay}ms (intento ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     this.reconnectTimeout = setTimeout(() => {
       this.connect();
@@ -131,12 +174,17 @@ class WebSocketService {
 
     if (this.ws) {
       // Desregistrar usuario antes de cerrar
-      if (this.isConnected && this.userId) {
-        const unregisterMessage = JSON.stringify({
-          type: 'UNREGISTER',
-          userId: this.userId,
-        });
-        this.ws.send(unregisterMessage);
+      if (this.isConnected && this.userId && this.ws.readyState === WebSocket.OPEN) {
+        try {
+          const unregisterMessage = JSON.stringify({
+            type: 'UNREGISTER',
+            userId: this.userId,
+          });
+          this.ws.send(unregisterMessage);
+          console.log('[WebSocket] ✅ Usuario desregistrado');
+        } catch (error) {
+          console.error('[WebSocket] ⚠️ Error al desregistrar usuario:', error);
+        }
       }
 
       this.ws.close();

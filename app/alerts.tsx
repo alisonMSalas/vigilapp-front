@@ -237,19 +237,19 @@ export default function AlertsScreen() {
           <View style={styles.statsCard}>
             <View style={styles.statItem}>
               <ThemedText style={styles.statNumber}>{stats.total}</ThemedText>
-              <ThemedText style={styles.statLabel}>Total Alertas</ThemedText>
+              <ThemedText style={styles.statLabel} numberOfLines={2}>Total Alertas</ThemedText>
             </View>
             <View style={styles.statItem}>
               <ThemedText style={styles.statNumber}>{stats.active}</ThemedText>
-              <ThemedText style={styles.statLabel}>Activas</ThemedText>
+              <ThemedText style={styles.statLabel} numberOfLines={2}>Activas</ThemedText>
             </View>
             <View style={styles.statItem}>
               <ThemedText style={styles.statNumber}>{stats.verified}</ThemedText>
-              <ThemedText style={styles.statLabel}>Verificadas</ThemedText>
+              <ThemedText style={styles.statLabel} numberOfLines={2}>Verificadas</ThemedText>
             </View>
             <View style={styles.statItem}>
               <ThemedText style={styles.statNumber}>{stats.resolved}</ThemedText>
-              <ThemedText style={styles.statLabel}>Resueltas</ThemedText>
+              <ThemedText style={styles.statLabel} numberOfLines={2}>Resueltas</ThemedText>
             </View>
           </View>
 
@@ -444,16 +444,16 @@ const styles = StyleSheet.create({
     margin: 20,
     borderRadius: 16,
     padding: 20,
-    gap: 16,
+    gap: 12,
     flexWrap: 'wrap',
   },
   statItem: {
-    width: '45%',
+    width: '48%',
     alignItems: 'center',
-    padding: 4,
+    padding: 8,
   },
   statNumber: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
     color: '#2196f3',
     marginBottom: 4,

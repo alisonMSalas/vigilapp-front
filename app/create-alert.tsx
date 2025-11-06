@@ -72,6 +72,15 @@ export default function CreateAlertScreen() {
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
 
+  // Función helper para navegar hacia atrás de forma segura
+  const safeGoBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/home');
+    }
+  };
+
   // Recibir la dirección y coordenadas desde la pantalla de location
   useEffect(() => {
     if (params.address) {
@@ -168,11 +177,11 @@ export default function CreateAlertScreen() {
   const canPublish = selectedType && title.length > 0 && description.length > 0 && latitude && longitude;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.container}>
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={safeGoBack} style={styles.backButton}>
             <Feather name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>
           <ThemedText style={styles.headerTitle}>Nueva Alerta</ThemedText>

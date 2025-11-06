@@ -6,6 +6,9 @@ import {
   alertService,
   Alert as AlertType,
 } from "@/services/alert.service";
+import { locationService } from "@/services/location.service";
+import { notificationService } from "@/services/notification.service";
+import { calculateDistance, formatDistance } from "@/services/utils/geolocation.utils";
 import { userZoneService } from "@/services/user-zone.service";
 import {
   AlertNotification,
@@ -64,6 +67,18 @@ export default function HomeScreen() {
   // Cargar datos iniciales
   useEffect(() => {
     loadInitialData();
+  }, []);
+
+  // Solicitar permisos de notificaciones
+  useEffect(() => {
+    const requestNotificationPermissions = async () => {
+      const hasPermissions = await notificationService.hasPermissions();
+      if (!hasPermissions) {
+        console.log('[Home] 📢 Solicitando permisos de notificación...');
+        await notificationService.requestPermissions();
+      }
+    };
+    requestNotificationPermissions();
   }, []);
 
   // Conectar al WebSocket
@@ -181,19 +196,64 @@ export default function HomeScreen() {
     return `hace ${days} día${days > 1 ? "s" : ""}`;
   };
 
-  const handleNewAlert = (notification: AlertNotification) => {
-    // Mostrar notificación al usuario
-    Alert.alert(
-      "¡Nueva Alerta!",
-      `${notification.alertTitle}\n\n${notification.alertDescription}`,
-      [
-        {
-          text: "Ver detalles",
-          onPress: () =>
-            router.push(`/alert-detail?id=${notification.alertId}`),
-        },
-        { text: "Cerrar", style: "cancel" },
-      ]
+  const handleNewAlert = async (notification: AlertNotification) => {
+    try {
+      console.log('[Home] 🔔 Nueva alerta recibida:', notification.alertTitle);
+
+      // 1. Obtener ubicación actual del usuario
+      const userLocation = await locationService.getCurrentLocation();
+      if (!userLocation) {
+        console.log('[Home] ⚠️ No se pudo obtener ubicación del usuario, mostrando alerta sin filtrar');
+        // Si no hay ubicación, mostrar la alerta de todas formas
+        showAlertNotification(notification, "Distancia desconocida");
+        return;
+      }
+
+      // 2. Obtener radio configurado del usuario
+      const userZone = await userZoneService.getUserZone();
+      if (!userZone) {
+        console.log('[Home] ⚠️ Usuario sin zona configurada, mostrando alerta sin filtrar');
+        // Si no hay zona configurada, mostrar la alerta
+        showAlertNotification(notification, "Distancia desconocida");
+        return;
+      }
+
+      // 3. Calcular distancia entre usuario y alerta
+      const distance = calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        notification.latitude,
+        notification.longitude
+      );
+
+      console.log('[Home] 📏 Distancia calculada:', formatDistance(distance));
+      console.log('[Home] 📍 Radio configurado:', formatDistance(userZone.radiusM));
+
+      // 4. Verificar si está dentro del rango
+      if (distance <= userZone.radiusM) {
+        console.log('[Home] ✅ Alerta dentro del rango, mostrando notificación');
+        showAlertNotification(notification, formatDistance(distance));
+      } else {
+        console.log('[Home] ❌ Alerta fuera del rango, ignorando');
+        console.log(`  Distancia: ${formatDistance(distance)} > Radio: ${formatDistance(userZone.radiusM)}`);
+      }
+    } catch (error) {
+      console.error('[Home] ❌ Error procesando nueva alerta:', error);
+      // En caso de error, mostrar la alerta para no perder información importante
+      showAlertNotification(notification, "Error calculando distancia");
+    }
+  };
+
+  /**
+   * Mostrar notificación y agregar alerta a la lista
+   */
+  const showAlertNotification = (notification: AlertNotification, distance: string) => {
+    // Mostrar notificación nativa
+    notificationService.showAlertNotification(
+      notification.alertTitle,
+      notification.alertDescription,
+      notification.alertCategory,
+      notification.alertId
     );
 
     // Agregar alerta a la lista
@@ -202,7 +262,7 @@ export default function HomeScreen() {
       type: mapCategoryToType(notification.alertCategory),
       title: notification.alertTitle,
       description: notification.alertDescription,
-      distance: "Calculando...", // TODO: calcular distancia real
+      distance: distance,
       time: "hace un momento",
       isNew: true,
       icon: getIconForCategory(notification.alertCategory),
@@ -210,6 +270,9 @@ export default function HomeScreen() {
 
     setAlerts((prevAlerts) => [newAlert, ...prevAlerts]);
     setNewAlertsCount((prev) => prev + 1);
+    setActiveAlertsCount((prev) => prev + 1);
+
+    console.log('[Home] ✅ Alerta agregada a la lista');
   };
 
   const mapCategoryToType = (category: AlertCategory): AlertData["type"] => {

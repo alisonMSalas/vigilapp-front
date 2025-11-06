@@ -48,7 +48,7 @@ export default function RegisterScreen() {
   const handleBackToLogin = () => {
     // Navegar al login
     const { router } = require('expo-router');
-    router.back();
+    router.replace('/login');
   };
 
   return (

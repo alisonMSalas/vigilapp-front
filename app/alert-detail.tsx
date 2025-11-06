@@ -13,6 +13,15 @@ export default function AlertDetailScreen() {
   const [loading, setLoading] = useState(true);
   const insets = useSafeAreaInsets();
 
+  // Función helper para navegar hacia atrás de forma segura
+  const safeGoBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/home');
+    }
+  };
+
   useEffect(() => {
     loadAlertDetail();
   }, [params.id]);
@@ -20,7 +29,7 @@ export default function AlertDetailScreen() {
   const loadAlertDetail = async () => {
     if (!params.id) {
       Alert.alert('Error', 'ID de alerta no proporcionado');
-      router.back();
+      safeGoBack();
       return;
     }
 
@@ -32,7 +41,7 @@ export default function AlertDetailScreen() {
     } catch (error) {
       console.error('[AlertDetail] ❌ Error cargando alerta:', error);
       Alert.alert('Error', 'No se pudo cargar el detalle de la alerta');
-      router.back();
+      safeGoBack();
     } finally {
       setLoading(false);
     }
@@ -125,7 +134,7 @@ export default function AlertDetailScreen() {
         <View style={[styles.container, styles.loadingContainer]}>
           <Feather name="alert-circle" size={48} color="#ccc" />
           <ThemedText style={styles.loadingText}>Alerta no encontrada</ThemedText>
-          <TouchableOpacity style={styles.backHomeButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backHomeButton} onPress={safeGoBack}>
             <ThemedText style={styles.backHomeButtonText}>Volver</ThemedText>
           </TouchableOpacity>
         </View>
@@ -141,7 +150,7 @@ export default function AlertDetailScreen() {
       <View style={styles.container}>
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={safeGoBack} style={styles.backButton}>
             <Feather name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>
           <ThemedText style={styles.headerTitle}>Detalle de Alerta</ThemedText>
