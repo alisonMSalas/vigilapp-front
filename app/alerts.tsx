@@ -1,10 +1,11 @@
 import BottomNavbar, { BottomTabKey } from '@/components/BottomNavbar';
 import TopHeader from '@/components/TopHeader';
 import { ThemedText } from '@/components/themed-text';
+import { alertService, Alert as AlertType, AlertCategory } from '@/services/alert.service';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface AlertData {
@@ -36,106 +37,130 @@ const getAlertTypeColor = (type: AlertData['type']) => {
   }
 };
 
-const mockAlerts: AlertData[] = [
-  {
-    id: '1',
-    type: 'emergency',
-    title: 'Accidente de Tránsito Mayor',
-    description: 'Colisión múltiple en la Av. 10 de Agosto y 6 de Diciembre. Tráfico completamente bloqueado en ambos sentidos.',
-    distance: '0.3 km',
-    time: 'hace 5 min',
-    city: 'Quito',
-    status: 'Activa',
-    reports: '47 reportes',
-    isNew: true,
-    icon: 'alert-triangle',
-  },
-  {
-    id: '2',
-    type: 'warning',
-    title: 'Inundación en Vía Principal',
-    description: 'Agua acumulada en la Av. Francisco de Orellana por ruptura de tubería principal.',
-    distance: '1.2 km',
-    time: 'hace 20 min',
-    city: 'Quito',
-    status: 'Activa',
-    reports: '23 reportes',
-    isNew: true,
-    icon: 'alert-triangle',
-  },
-  {
-    id: '3',
-    type: 'community',
-    title: 'Evento Comunitario - Feria',
-    description: 'Feria artesanal este fin de semana en el Parque El Ejido.',
-    distance: '2.1 km',
-    time: 'hace 2 horas',
-    city: 'Quito',
-    status: 'Activa',
-    reports: '5 reportes',
-    icon: 'users',
-  },
-  {
-    id: '4',
-    type: 'info',
-    title: 'Corte de Energía Programado',
-    description: 'Mantenimiento eléctrico en sector norte de la ciudad.',
-    distance: '3.5 km',
-    time: 'hace 4 horas',
-    city: 'Quito',
-    status: 'Activa',
-    reports: '12 reportes',
-    icon: 'info',
-  },
-  {
-    id: '5',
-    type: 'warning',
-    title: 'Manifestación Estudiantil',
-    description: 'Marcha pacífica desde el Parque Cevallos hacia la Gobernación.',
-    distance: '0.8 km',
-    time: 'hace 1 día',
-    city: 'Ambato',
-    status: 'Resuelta',
-    reports: '8 reportes',
-    icon: 'alert-triangle',
-  },
-  {
-    id: '6',
-    type: 'emergency',
-    title: 'Incendio Estructural',
-    description: 'Edificio comercial en llamas en el sector centro de la ciudad.',
-    distance: '2.8 km',
-    time: 'hace 3 horas',
-    city: 'Quito',
-    status: 'Activa',
-    reports: '56 reportes',
-    icon: 'alert-triangle',
-  },
-];
-
 export default function AlertsScreen() {
   const [active, setActive] = useState<BottomTabKey>('alerts');
-  const [selectedType, setSelectedType] = useState('Todos los tipos');
+  const [alerts, setAlerts] = useState<AlertData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedType, setSelectedType] = useState<'all' | AlertCategory>('all');
+  const [selectedTypeLabel, setSelectedTypeLabel] = useState('Todos los tipos');
   const [showTypeFilter, setShowTypeFilter] = useState(false);
   const router = useRouter();
 
+  useEffect(() => {
+    loadAlerts();
+  }, []);
+
+  const loadAlerts = async () => {
+    try {
+      setLoading(true);
+      const myZoneAlerts = await alertService.getMyZoneAlerts();
+      const mappedAlerts = myZoneAlerts.map(alert => mapAlertToFrontend(alert));
+      setAlerts(mappedAlerts);
+      console.log('[Alerts] ✅ Alertas cargadas:', mappedAlerts.length);
+    } catch (error) {
+      console.log('[Alerts] ℹ️ No se pudieron cargar alertas (puede ser que no haya zona configurada)');
+      setAlerts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mapAlertToFrontend = (alert: AlertType): AlertData => {
+    return {
+      id: alert.id,
+      type: mapCategoryToType(alert.category),
+      title: alert.title,
+      description: alert.description,
+      distance: 'Calculando...',
+      time: getRelativeTime(alert.createdAt),
+      city: alert.cityId || 'Sin ciudad',
+      status: getStatusLabel(alert.status),
+      reports: '-- reportes',
+      isNew: isAlertNew(alert.createdAt),
+      icon: getIconForCategory(alert.category),
+    };
+  };
+
+  const mapCategoryToType = (category: AlertCategory): AlertData['type'] => {
+    switch (category) {
+      case 'EMERGENCY': return 'emergency';
+      case 'PRECAUTION': return 'warning';
+      case 'COMMUNITY': return 'community';
+      case 'INFO': return 'info';
+    }
+  };
+
+  const getIconForCategory = (category: AlertCategory): keyof typeof Feather.glyphMap => {
+    switch (category) {
+      case 'EMERGENCY':
+      case 'PRECAUTION':
+        return 'alert-triangle';
+      case 'COMMUNITY':
+        return 'users';
+      case 'INFO':
+        return 'info';
+    }
+  };
+
+  const getStatusLabel = (status: string): string => {
+    switch (status) {
+      case 'ACTIVE': return 'Activa';
+      case 'RESOLVED': return 'Resuelta';
+      case 'CANCELLED': return 'Cancelada';
+      case 'EXPIRED': return 'Expirada';
+      default: return status;
+    }
+  };
+
+  const isAlertNew = (createdAt: string): boolean => {
+    const alertTime = new Date(createdAt).getTime();
+    const now = Date.now();
+    const oneHour = 60 * 60 * 1000;
+    return (now - alertTime) < oneHour;
+  };
+
+  const getRelativeTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = Date.now();
+    const diff = now - date.getTime();
+
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'hace un momento';
+    if (minutes < 60) return `hace ${minutes} min`;
+    if (hours < 24) return `hace ${hours} hora${hours > 1 ? 's' : ''}`;
+    return `hace ${days} día${days > 1 ? 's' : ''}`;
+  };
+
+  const filteredAlerts = selectedType === 'all'
+    ? alerts
+    : alerts.filter(alert => alert.type === mapCategoryToType(selectedType as AlertCategory));
+
+  const stats = {
+    total: alerts.length,
+    active: alerts.filter(a => a.status === 'Activa').length,
+    verified: alerts.filter(a => a.status === 'Verificada').length,
+    resolved: alerts.filter(a => a.status === 'Resuelta').length,
+  };
+
   const alertTypes = [
-    { label: 'Todos los tipos', value: 'all', color: null },
-    { label: 'Emergencia', value: 'emergency', color: '#f44336' },
-    { label: 'Precaución', value: 'warning', color: '#ffc107' },
-    { label: 'Informativa', value: 'info', color: '#2196f3' },
-    { label: 'Comunitaria', value: 'community', color: '#4caf50' },
+    { label: 'Todos los tipos', value: 'all' as const, color: null },
+    { label: 'Emergencia', value: 'EMERGENCY' as AlertCategory, color: '#f44336' },
+    { label: 'Precaución', value: 'PRECAUTION' as AlertCategory, color: '#ffc107' },
+    { label: 'Informativa', value: 'INFO' as AlertCategory, color: '#2196f3' },
+    { label: 'Comunitaria', value: 'COMMUNITY' as AlertCategory, color: '#4caf50' },
   ];
 
   const handleTabPress = (tab: BottomTabKey) => {
     if (tab === 'home') {
       router.push('/home');
     } else if (tab === 'map') {
-      // TODO: Navegar a mapa
+      router.push('/map');
     } else if (tab === 'create') {
       router.push('/create-alert');
     }
-    // Si es 'alerts', no hacer nada porque ya estamos aquí
   };
 
   const handleAlertPress = (alert: AlertData) => {
@@ -152,17 +177,17 @@ export default function AlertsScreen() {
     router.replace('/login');
   };
 
-  const stats = {
-    total: 10,
-    active: 6,
-    verified: 2,
-    resolved: 1,
-  };
-
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <TopHeader notificationsCount={3} onLogout={handleLogout} />
+        <TopHeader notificationsCount={0} onLogout={handleLogout} />
+
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#005677" />
+            <ThemedText style={styles.loadingText}>Cargando alertas...</ThemedText>
+          </View>
+        )}
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
           {/* Filters Section */}
@@ -178,7 +203,7 @@ export default function AlertsScreen() {
             >
               <ThemedText style={styles.filterLabel}>Tipo de Alerta</ThemedText>
               <View style={styles.filterValue}>
-                <ThemedText style={styles.filterValueText}>{selectedType}</ThemedText>
+                <ThemedText style={styles.filterValueText}>{selectedTypeLabel}</ThemedText>
                 <Feather
                   name={showTypeFilter ? 'chevron-up' : 'chevron-down'}
                   size={18}
@@ -195,7 +220,8 @@ export default function AlertsScreen() {
                     key={type.value}
                     style={styles.filterOption}
                     onPress={() => {
-                      setSelectedType(type.label);
+                      setSelectedType(type.value);
+                      setSelectedTypeLabel(type.label);
                       setShowTypeFilter(false);
                     }}
                   >
@@ -231,13 +257,24 @@ export default function AlertsScreen() {
           <View style={styles.listHeader}>
             <ThemedText style={styles.listTitle}>Alertas Recientes</ThemedText>
             <ThemedText style={styles.listSubtitle}>
-              Mostrando {mockAlerts.length} de {stats.total} resultados
+              Mostrando {filteredAlerts.length} de {stats.total} resultados
             </ThemedText>
           </View>
 
           {/* Alerts List */}
           <View style={styles.alertsList}>
-            {mockAlerts.map((alert) => {
+            {filteredAlerts.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Feather name="bell-off" size={48} color="#ccc" />
+                <ThemedText style={styles.emptyText}>No hay alertas para mostrar</ThemedText>
+                <ThemedText style={styles.emptySubtext}>
+                  {selectedType === 'all'
+                    ? 'Aún no hay alertas en tu zona'
+                    : 'No hay alertas de este tipo'}
+                </ThemedText>
+              </View>
+            ) : (
+              filteredAlerts.map((alert) => {
               const alertColor = getAlertTypeColor(alert.type);
               return (
               <TouchableOpacity
@@ -286,7 +323,8 @@ export default function AlertsScreen() {
                 </View>
               </TouchableOpacity>
             );
-            })}
+            })
+            )}
           </View>
         </ScrollView>
 
@@ -307,6 +345,36 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#005677',
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
+    textAlign: 'center',
   },
   filtersSection: {
     backgroundColor: '#fff',
@@ -382,15 +450,16 @@ const styles = StyleSheet.create({
   statItem: {
     width: '45%',
     alignItems: 'center',
+    padding: 4,
   },
   statNumber: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: '#2196f3',
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#666',
     textAlign: 'center',
   },

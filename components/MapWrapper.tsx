@@ -4,16 +4,18 @@ import { ThemedText } from './themed-text';
 // Solo importar MapView dinámicamente en móvil
 let MapViewComponent: any = null;
 let MarkerComponent: any = null;
+let CircleComponent: any = null;
 
 const loadMaps = () => {
   if (MapViewComponent) return; // Ya está cargado
-  
+
   if (Platform.OS !== 'web') {
     try {
       // Dynamic require para evitar que web lo intente cargar
       const Maps = require('react-native-maps');
       MapViewComponent = Maps.default;
       MarkerComponent = Maps.Marker;
+      CircleComponent = Maps.Circle;
     } catch (e) {
       console.log('react-native-maps no disponible:', e);
     }
@@ -27,11 +29,12 @@ interface MapWrapperProps {
     latitudeDelta: number;
     longitudeDelta: number;
   };
-  onPress: (event: any) => void;
+  onPress?: (event: any) => void;
+  onRegionChangeComplete?: (region: any) => void;
   children?: React.ReactNode;
 }
 
-export default function MapWrapper({ region, onPress, children }: MapWrapperProps) {
+export default function MapWrapper({ region, onPress, onRegionChangeComplete, children }: MapWrapperProps) {
   // Si estamos en web, retornar fallback inmediatamente
   if (Platform.OS === 'web') {
     return (
@@ -65,7 +68,12 @@ export default function MapWrapper({ region, onPress, children }: MapWrapperProp
   }
 
   return (
-    <MapViewComponent style={styles.map} region={region} onPress={onPress}>
+    <MapViewComponent
+      style={styles.map}
+      region={region}
+      onPress={onPress}
+      onRegionChangeComplete={onRegionChangeComplete}
+    >
       {children}
     </MapViewComponent>
   );
@@ -77,6 +85,34 @@ export function MapMarker({ coordinate, title }: { coordinate: { latitude: numbe
   }
 
   return <MarkerComponent coordinate={coordinate} title={title} />;
+}
+
+export function MapCircle({
+  center,
+  radius,
+  fillColor,
+  strokeColor,
+  strokeWidth,
+}: {
+  center: { latitude: number; longitude: number };
+  radius: number;
+  fillColor?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+}) {
+  if (!CircleComponent || Platform.OS === 'web') {
+    return null;
+  }
+
+  return (
+    <CircleComponent
+      center={center}
+      radius={radius}
+      fillColor={fillColor}
+      strokeColor={strokeColor}
+      strokeWidth={strokeWidth}
+    />
+  );
 }
 
 const styles = StyleSheet.create({

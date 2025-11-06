@@ -1,45 +1,81 @@
 import { ThemedText } from '@/components/themed-text';
+import { alertService, Alert as AlertType, AlertCategory, AlertStatus } from '@/services/alert.service';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AlertDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const [alert, setAlert] = useState<AlertType | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Simular datos de la alerta (en producción vendría de params o API)
-  const alert = {
-    id: params.id || '1',
-    type: params.type || 'warning',
-    title: 'Manifestación Estudiantil',
-    description: 'Marcha pacífica de estudiantes universitarios desde el Parque Cevallos hacia la Gobernación.',
-    detailedDescription: 'Una manifestación estudiantil se está llevando a cabo de forma pacífica. Los estudiantes han comenzado su marcha desde el Parque Cevallos con dirección hacia la Gobernación. Se recomienda buscar rutas alternas para evitar retrasos en el tráfico.',
-    location: 'Av. Principal',
-    distance: '0.8 km',
-    reportedBy: 'Carlos M.',
-    reportedTime: 'hace 15 min',
-    status: 'Activa',
+  useEffect(() => {
+    loadAlertDetail();
+  }, [params.id]);
+
+  const loadAlertDetail = async () => {
+    if (!params.id) {
+      Alert.alert('Error', 'ID de alerta no proporcionado');
+      router.back();
+      return;
+    }
+
+    try {
+      console.log('[AlertDetail] 📥 Cargando alerta:', params.id);
+      const alertData = await alertService.getAlertById(params.id as string);
+      console.log('[AlertDetail] ✅ Alerta cargada:', alertData);
+      setAlert(alertData);
+    } catch (error) {
+      console.error('[AlertDetail] ❌ Error cargando alerta:', error);
+      Alert.alert('Error', 'No se pudo cargar el detalle de la alerta');
+      router.back();
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getAlertConfig = () => {
-    switch (alert.type) {
-      case 'warning':
+  const getRelativeTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = Date.now();
+    const diff = now - date.getTime();
+
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'hace un momento';
+    if (minutes < 60) return `hace ${minutes} min`;
+    if (hours < 24) return `hace ${hours} hora${hours > 1 ? 's' : ''}`;
+    return `hace ${days} día${days > 1 ? 's' : ''}`;
+  };
+
+  const getAlertConfig = (category: AlertType['category']) => {
+    switch (category) {
+      case 'EMERGENCY':
+        return {
+          color: '#f44336',
+          bgColor: '#ffebee',
+          icon: 'alert-circle',
+          label: 'Emergencia',
+        };
+      case 'PRECAUTION':
         return {
           color: '#ff9800',
           bgColor: '#fff3e0',
           icon: 'alert-triangle',
           label: 'Precaución',
         };
-      case 'community':
+      case 'COMMUNITY':
         return {
           color: '#4caf50',
           bgColor: '#e8f5e9',
           icon: 'users',
           label: 'Comunitaria',
         };
-      case 'info':
+      case 'INFO':
         return {
           color: '#2196f3',
           bgColor: '#e3f2fd',
@@ -56,7 +92,48 @@ export default function AlertDetailScreen() {
     }
   };
 
-  const config = getAlertConfig();
+  const getStatusConfig = (status: AlertType['status']) => {
+    switch (status) {
+      case 'ACTIVE':
+        return { color: '#ff9800', label: 'Activa' };
+      case 'RESOLVED':
+        return { color: '#4caf50', label: 'Resuelta' };
+      case 'CANCELLED':
+        return { color: '#757575', label: 'Cancelada' };
+      case 'EXPIRED':
+        return { color: '#f44336', label: 'Expirada' };
+      default:
+        return { color: '#757575', label: 'Desconocida' };
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={[styles.container, styles.loadingContainer]}>
+          <ActivityIndicator size="large" color="#005677" />
+          <ThemedText style={styles.loadingText}>Cargando alerta...</ThemedText>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!alert) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={[styles.container, styles.loadingContainer]}>
+          <Feather name="alert-circle" size={48} color="#ccc" />
+          <ThemedText style={styles.loadingText}>Alerta no encontrada</ThemedText>
+          <TouchableOpacity style={styles.backHomeButton} onPress={() => router.back()}>
+            <ThemedText style={styles.backHomeButtonText}>Volver</ThemedText>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const config = getAlertConfig(alert.category);
+  const statusConfig = getStatusConfig(alert.status);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -81,8 +158,8 @@ export default function AlertDetailScreen() {
                 </ThemedText>
               </View>
               <View style={styles.statusBadge}>
-                <View style={[styles.statusDot, { backgroundColor: '#ff9800' }]} />
-                <ThemedText style={styles.statusText}>{alert.status}</ThemedText>
+                <View style={[styles.statusDot, { backgroundColor: statusConfig.color }]} />
+                <ThemedText style={styles.statusText}>{statusConfig.label}</ThemedText>
               </View>
             </View>
 
@@ -96,7 +173,9 @@ export default function AlertDetailScreen() {
               <Feather name="map-pin" size={20} color="#005677" />
               <View style={styles.detailContent}>
                 <ThemedText style={styles.detailLabel}>Ubicación</ThemedText>
-                <ThemedText style={styles.detailValue}>{alert.location}</ThemedText>
+                <ThemedText style={styles.detailValue}>
+                  {alert.address || `${alert.latitude.toFixed(4)}, ${alert.longitude.toFixed(4)}`}
+                </ThemedText>
               </View>
             </View>
 
@@ -104,7 +183,7 @@ export default function AlertDetailScreen() {
               <Feather name="clock" size={20} color="#005677" />
               <View style={styles.detailContent}>
                 <ThemedText style={styles.detailLabel}>Reportado</ThemedText>
-                <ThemedText style={styles.detailValue}>{alert.reportedTime}</ThemedText>
+                <ThemedText style={styles.detailValue}>{getRelativeTime(alert.createdAt)}</ThemedText>
               </View>
             </View>
 
@@ -112,15 +191,19 @@ export default function AlertDetailScreen() {
               <Feather name="user" size={20} color="#005677" />
               <View style={styles.detailContent}>
                 <ThemedText style={styles.detailLabel}>Reportado por</ThemedText>
-                <ThemedText style={styles.detailValue}>{alert.reportedBy}</ThemedText>
+                <ThemedText style={styles.detailValue}>
+                  {alert.isAnonymous ? 'Anónimo' : alert.createdByUserName}
+                </ThemedText>
               </View>
             </View>
 
             <View style={styles.detailCard}>
               <Feather name="map" size={20} color="#005677" />
               <View style={styles.detailContent}>
-                <ThemedText style={styles.detailLabel}>Distancia</ThemedText>
-                <ThemedText style={styles.detailValue}>{alert.distance}</ThemedText>
+                <ThemedText style={styles.detailLabel}>Radio</ThemedText>
+                <ThemedText style={styles.detailValue}>
+                  {alert.radiusM >= 1000 ? `${(alert.radiusM / 1000).toFixed(1)} km` : `${alert.radiusM} m`}
+                </ThemedText>
               </View>
             </View>
           </View>
@@ -128,7 +211,7 @@ export default function AlertDetailScreen() {
           {/* Detailed Description */}
           <View style={styles.descriptionContainer}>
             <ThemedText style={styles.descriptionTitle}>Descripción Detallada</ThemedText>
-            <ThemedText style={styles.descriptionText}>{alert.detailedDescription}</ThemedText>
+            <ThemedText style={styles.descriptionText}>{alert.description}</ThemedText>
           </View>
 
           {/* Photo Evidence */}
@@ -194,6 +277,28 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+  },
+  backHomeButton: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#005677',
+    borderRadius: 8,
+  },
+  backHomeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',

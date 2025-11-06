@@ -1,10 +1,14 @@
 import { ThemedText } from '@/components/themed-text';
+import { alertService, AlertCategory } from '@/services/alert.service';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
+    Alert,
     ScrollView,
     StyleSheet,
+    Switch,
     TextInput,
     TouchableOpacity,
     View
@@ -57,16 +61,24 @@ export default function CreateAlertScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [locationAddress, setLocationAddress] = useState('');
-  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [isAnonymous, setIsAnonymous] = useState(true);
+  const [radiusM, setRadiusM] = useState(1000);
+  const [publishing, setPublishing] = useState(false);
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  // Recibir la dirección seleccionada desde la pantalla de location
+  // Recibir la dirección y coordenadas desde la pantalla de location
   useEffect(() => {
     if (params.address) {
       setLocationAddress(params.address as string);
     }
-  }, [params.address]);
+    if (params.lat && params.lon) {
+      setLatitude(parseFloat(params.lat as string));
+      setLongitude(parseFloat(params.lon as string));
+    }
+  }, [params.address, params.lat, params.lon]);
 
   const handleOpenLocationPicker = () => {
     router.push({
@@ -75,7 +87,62 @@ export default function CreateAlertScreen() {
     });
   };
 
-  const canPublish = selectedType && title.length > 0 && description.length > 0;
+  // Mapear tipo de alerta del frontend al backend
+  const mapAlertType = (type: AlertType): AlertCategory => {
+    const mapping: Record<AlertType, AlertCategory> = {
+      emergency: 'EMERGENCY',
+      warning: 'PRECAUTION',
+      info: 'INFO',
+      community: 'COMMUNITY',
+    };
+    return mapping[type];
+  };
+
+  const handlePublish = async () => {
+    if (!selectedType || !title || !description) {
+      Alert.alert('Error', 'Por favor completa todos los campos requeridos');
+      return;
+    }
+
+    if (!latitude || !longitude) {
+      Alert.alert('Error', 'Por favor selecciona una ubicación');
+      return;
+    }
+
+    setPublishing(true);
+    try {
+      const alertData = {
+        category: mapAlertType(selectedType),
+        title: title.trim(),
+        description: description.trim(),
+        latitude,
+        longitude,
+        radiusM,
+        address: locationAddress,
+        isAnonymous,
+      };
+
+      await alertService.createAlert(alertData);
+
+      Alert.alert(
+        'Éxito',
+        'Tu alerta ha sido publicada correctamente',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.push('/home'),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error publishing alert:', error);
+      Alert.alert('Error', 'No se pudo publicar la alerta. Intenta de nuevo.');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const canPublish = selectedType && title.length > 0 && description.length > 0 && latitude && longitude;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -87,12 +154,17 @@ export default function CreateAlertScreen() {
           </TouchableOpacity>
           <ThemedText style={styles.headerTitle}>Nueva Publicación</ThemedText>
           <TouchableOpacity
-            style={[styles.publishButton, !canPublish && styles.publishButtonDisabled]}
-            disabled={!canPublish}
+            style={[styles.publishButton, (!canPublish || publishing) && styles.publishButtonDisabled]}
+            disabled={!canPublish || publishing}
+            onPress={handlePublish}
           >
-            <ThemedText style={[styles.publishText, !canPublish && styles.publishTextDisabled]}>
-              Publicar
-            </ThemedText>
+            {publishing ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <ThemedText style={[styles.publishText, !canPublish && styles.publishTextDisabled]}>
+                Publicar
+              </ThemedText>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -102,9 +174,22 @@ export default function CreateAlertScreen() {
             <View style={styles.userIcon}>
               <Feather name="user" size={20} color="#005677" />
             </View>
-            <View>
-              <ThemedText style={styles.userName}>Usuario Anónimo</ThemedText>
-              <ThemedText style={styles.userSubtext}>Publicación anónima para la comunidad</ThemedText>
+            <View style={{ flex: 1 }}>
+              <ThemedText style={styles.userName}>
+                {isAnonymous ? 'Usuario Anónimo' : 'Tu Nombre'}
+              </ThemedText>
+              <ThemedText style={styles.userSubtext}>
+                {isAnonymous ? 'Publicación anónima' : 'Publicación con tu identidad'}
+              </ThemedText>
+            </View>
+            <View style={styles.anonymousSwitch}>
+              <ThemedText style={styles.anonymousSwitchLabel}>Anónimo</ThemedText>
+              <Switch
+                value={isAnonymous}
+                onValueChange={setIsAnonymous}
+                trackColor={{ false: '#ccc', true: '#005677' }}
+                thumbColor={isAnonymous ? '#fff' : '#f4f3f4'}
+              />
             </View>
           </View>
 
@@ -278,6 +363,15 @@ const styles = StyleSheet.create({
   userSubtext: {
     fontSize: 14,
     color: '#666',
+  },
+  anonymousSwitch: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  anonymousSwitchLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
   },
   section: {
     padding: 20,

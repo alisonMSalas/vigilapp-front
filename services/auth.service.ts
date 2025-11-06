@@ -7,6 +7,7 @@
  * - POST /api/login - Login con JSON
  */
 
+import * as SecureStore from 'expo-secure-store';
 import { API_CONFIG, getJsonHeaders, handleApiError } from './config/api.config';
 import {
   ImageAsset,
@@ -38,18 +39,81 @@ export interface AuthResult<T = any> {
 
 class AuthService {
   private token: string | null = null;
+  private currentUser: User | null = null;
+  private readonly TOKEN_KEY = 'vigilapp_auth_token';
+
+  /**
+   * Decodificar JWT y extraer información del usuario
+   */
+  private decodeToken(token: string): User | null {
+    try {
+      console.log('[AuthService] 🔓 Intentando decodificar token...');
+
+      // JWT tiene formato: header.payload.signature
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        console.error('[AuthService] ❌ Token JWT inválido, partes:', parts.length);
+        return null;
+      }
+
+      // Decodificar el payload (segunda parte)
+      const payload = parts[1];
+      // Convertir base64url a base64 estándar
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      // Agregar padding si es necesario
+      const paddedBase64 = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
+
+      console.log('[AuthService] 📦 Payload base64 (primeros 50 chars):', paddedBase64.substring(0, 50));
+
+      const decoded = JSON.parse(atob(paddedBase64));
+
+      console.log('[AuthService] 🔍 Token decodificado completo:');
+      console.log(JSON.stringify(decoded, null, 2));
+      console.log('[AuthService] 🔑 Claves disponibles:', Object.keys(decoded).join(', '));
+
+      // Extraer información del usuario del JWT
+      // Probar todas las posibles ubicaciones de userId y email
+      const user = {
+        id: decoded.userId || decoded.user_id || decoded.sub || decoded.id || decoded.jti || '',
+        email: decoded.email || decoded.username || decoded.sub || '',
+        firstName: decoded.firstName || decoded.first_name || decoded.given_name || '',
+        lastName: decoded.lastName || decoded.last_name || decoded.family_name || '',
+      };
+
+      console.log('[AuthService] 👤 Usuario extraído:', JSON.stringify(user));
+
+      if (!user.id) {
+        console.error('[AuthService] ⚠️ No se pudo extraer userId del token');
+        console.error('[AuthService] 📋 Payload completo para debug:', decoded);
+      }
+
+      return user;
+    } catch (error) {
+      console.error('[AuthService] ❌ Error decodificando token:', error);
+      console.error('[AuthService] 📄 Token (primeros 100 chars):', token.substring(0, 100));
+      return null;
+    }
+  }
 
   /**
    * Obtener token del storage
-   * TODO: Implementar SecureStore o AsyncStorage para persistencia
    */
   async getStoredToken(): Promise<string | null> {
     try {
-      // Implementación temporal en memoria
-      // En producción usar:
-      // import * as SecureStore from 'expo-secure-store';
-      // return await SecureStore.getItemAsync('auth_token');
-      return this.token;
+      // Primero intentar desde memoria (más rápido)
+      if (this.token) {
+        return this.token;
+      }
+
+      // Si no está en memoria, recuperar de SecureStore
+      const storedToken = await SecureStore.getItemAsync(this.TOKEN_KEY);
+      if (storedToken) {
+        this.token = storedToken;
+        // También decodificar y cargar usuario
+        this.currentUser = this.decodeToken(storedToken);
+      }
+      
+      return storedToken;
     } catch (error) {
       console.error('[AuthService] Error getting stored token:', error);
       return null;
@@ -61,9 +125,15 @@ class AuthService {
    */
   private async setStoredToken(token: string): Promise<void> {
     try {
-      // TODO: Implementar SecureStore
-      // await SecureStore.setItemAsync('auth_token', token);
+      // Guardar en SecureStore (persistente)
+      await SecureStore.setItemAsync(this.TOKEN_KEY, token);
+      
+      // También guardar en memoria para acceso rápido
       this.token = token;
+
+      // Decodificar token y guardar usuario
+      this.currentUser = this.decodeToken(token);
+      console.log('[AuthService] Usuario guardado:', this.currentUser);
     } catch (error) {
       console.error('[AuthService] Error storing token:', error);
     }
@@ -74,9 +144,9 @@ class AuthService {
    */
   async clearStoredToken(): Promise<void> {
     try {
-      // TODO: Implementar SecureStore
-      // await SecureStore.deleteItemAsync('auth_token');
+      await SecureStore.deleteItemAsync(this.TOKEN_KEY);
       this.token = null;
+      this.currentUser = null;
     } catch (error) {
       console.error('[AuthService] Error clearing token:', error);
     }
@@ -245,23 +315,25 @@ class AuthService {
   }
 
   /**
-   * Obtener información del usuario actual
-   * TODO: Implementar endpoint /api/auth/me en el backend
+   * Obtener información del usuario actual del token JWT
    */
   async getCurrentUser(): Promise<User | null> {
     try {
-      const token = await this.getStoredToken();
-      if (!token) return null;
-
-      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/me`, {
-        headers: getJsonHeaders(token),
-      });
-
-      if (response.ok) {
-        return await response.json();
+      // Si ya tenemos el usuario en memoria, devolverlo
+      if (this.currentUser) {
+        return this.currentUser;
       }
 
-      return null;
+      // Si no, intentar decodificar el token
+      const token = await this.getStoredToken();
+      if (!token) {
+        console.log('[AuthService] No hay token');
+        return null;
+      }
+
+      // Decodificar y guardar
+      this.currentUser = this.decodeToken(token);
+      return this.currentUser;
     } catch (error) {
       console.error('[AuthService] Error getting current user:', error);
       return null;

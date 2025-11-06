@@ -1,6 +1,7 @@
 import MapWrapper, { MapMarker } from '@/components/MapWrapper';
 import { ShieldIcon } from '@/components/ShieldIcon';
 import { ThemedText } from '@/components/themed-text';
+import { userZoneService, SaveUserZoneDto } from '@/services/user-zone.service';
 import { Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -152,9 +153,31 @@ export default function LocationScreen() {
             },
           });
         } else {
-          // TODO: Guardar ubicación en storage o enviar al backend
-          // await saveLocationToStorage({ latitude, longitude });
-          router.replace('/home');
+          // Guardar zona en el backend con radio por defecto de 5000m
+          console.log("[Location] 💾 Guardando zona en el backend...");
+          console.log("[Location] 📍 Coordenadas:", { latitude, longitude });
+          
+          try {
+            const zoneData: SaveUserZoneDto = {
+              centerLatitude: latitude,
+              centerLongitude: longitude,
+              radiusM: 5000, // Radio por defecto
+            };
+            
+            console.log("[Location] 📤 Llamando userZoneService.saveUserZone con:", zoneData);
+            await userZoneService.saveUserZone(zoneData);
+            console.log("[Location] ✅ Zona guardada exitosamente");
+            
+            router.replace('/home');
+          } catch (saveError) {
+            console.error("[Location] ❌ Error guardando zona:", saveError);
+            const errorMsg = saveError instanceof Error ? saveError.message : 'No se pudo guardar la zona';
+            Alert.alert(
+              'Error',
+              `No se pudo guardar tu zona: ${errorMsg}. Puedes configurarla más tarde desde Ajustes.`,
+              [{ text: 'OK', onPress: () => router.replace('/home') }]
+            );
+          }
         }
       } catch (geocodeError) {
         console.error('Error obteniendo dirección:', geocodeError);
@@ -218,24 +241,21 @@ export default function LocationScreen() {
     setSearchText(address.display_name);
   };
 
-  const handleConfirmLocation = () => {
+  const handleConfirmLocation = async () => {
     if (!selectedAddress) {
       Alert.alert('Error', 'Por favor selecciona una ubicación primero');
       return;
     }
 
-    const lat = parseFloat(selectedAddress.lat);
-    const lon = parseFloat(selectedAddress.lon);
+    const lat = selectedAddress.lat;
+    const lon = selectedAddress.lon;
     
-    console.log('Ubicación confirmada:', {
+    console.log('[Location] Ubicación confirmada:', {
       direccion: selectedAddress.display_name,
       latitud: lat,
       longitud: lon,
     });
 
-    // TODO: Guardar en storage o enviar al backend
-    // await saveLocationToStorage({ latitude: lat, longitude: lon });
-    
     // Navegar a la pantalla correcta según el origen
     if (returnTo === 'create-alert') {
       router.push({
@@ -247,7 +267,34 @@ export default function LocationScreen() {
         },
       });
     } else {
-      router.replace('/home');
+      // Guardar zona en el backend con radio por defecto de 5000m
+      setLoading(true);
+      console.log("[Location] 💾 Guardando zona (selección manual)...");
+      console.log("[Location] 📍 Coordenadas:", { lat, lon });
+      
+      try {
+        const zoneData: SaveUserZoneDto = {
+          centerLatitude: typeof lat === 'number' ? lat : parseFloat(lat),
+          centerLongitude: typeof lon === 'number' ? lon : parseFloat(lon),
+          radiusM: 5000, // Radio por defecto
+        };
+        
+        console.log("[Location] 📤 Llamando userZoneService.saveUserZone con:", zoneData);
+        await userZoneService.saveUserZone(zoneData);
+        console.log("[Location] ✅ Zona guardada exitosamente");
+        
+        setLoading(false);
+        router.replace('/home');
+      } catch (saveError) {
+        setLoading(false);
+        console.error("[Location] ❌ Error guardando zona:", saveError);
+        const errorMsg = saveError instanceof Error ? saveError.message : 'No se pudo guardar la zona';
+        Alert.alert(
+          'Error',
+          `No se pudo guardar tu zona: ${errorMsg}. Puedes configurarla más tarde desde Ajustes.`,
+          [{ text: 'OK', onPress: () => router.replace('/home') }]
+        );
+      }
     }
   };
 
