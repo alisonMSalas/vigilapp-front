@@ -4,13 +4,14 @@ import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AlertDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const [alert, setAlert] = useState<AlertType | null>(null);
   const [loading, setLoading] = useState(true);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     loadAlertDetail();
@@ -109,7 +110,7 @@ export default function AlertDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
         <View style={[styles.container, styles.loadingContainer]}>
           <ActivityIndicator size="large" color="#005677" />
           <ThemedText style={styles.loadingText}>Cargando alerta...</ThemedText>
@@ -120,7 +121,7 @@ export default function AlertDetailScreen() {
 
   if (!alert) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
         <View style={[styles.container, styles.loadingContainer]}>
           <Feather name="alert-circle" size={48} color="#ccc" />
           <ThemedText style={styles.loadingText}>Alerta no encontrada</ThemedText>
@@ -136,10 +137,10 @@ export default function AlertDetailScreen() {
   const statusConfig = getStatusConfig(alert.status);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Feather name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>
@@ -305,7 +306,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },

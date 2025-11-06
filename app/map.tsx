@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface MapRegion {
   latitude: number;
@@ -35,6 +36,7 @@ export default function MapScreen() {
   const [userZoneRadius, setUserZoneRadius] = useState<number | null>(null);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   // Cargar zona del usuario al montar
   useEffect(() => {
@@ -126,7 +128,7 @@ export default function MapScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backButton}
@@ -270,7 +272,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
     backgroundColor: "#fff",

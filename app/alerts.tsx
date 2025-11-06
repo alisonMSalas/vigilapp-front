@@ -178,7 +178,7 @@ export default function AlertsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.container}>
         <TopHeader notificationsCount={0} onLogout={handleLogout} />
 

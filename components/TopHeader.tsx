@@ -3,6 +3,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type TopHeaderProps = {
   style?: ViewStyle;
@@ -24,6 +25,7 @@ export default function TopHeader({
   const scheme = useColorScheme();
   const palette = scheme === 'dark' ? Colors.dark : Colors.light;
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const showBadge = typeof notificationsCount === 'number' && notificationsCount > 0;
 
@@ -50,7 +52,7 @@ export default function TopHeader({
           activeOpacity={1}
         />
       )}
-      <View style={[styles.wrapper, { backgroundColor: palette.background }, style]}>
+      <View style={[styles.wrapper, { backgroundColor: palette.background, paddingTop: insets.top + 8 }, style]}>
         <View style={styles.left}>
           {logo ? (
             <Image source={logo} style={styles.logo} resizeMode="contain" />
@@ -95,7 +97,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 8,
     paddingBottom: 8,
   },
   left: {

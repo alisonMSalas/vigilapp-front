@@ -16,7 +16,7 @@ import {
   View,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Address {
   display_name: string;
@@ -44,6 +44,7 @@ export default function SettingsScreen() {
     lng: -78.6186,
   });
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   // Cargar configuración actual al montar
   useEffect(() => {
@@ -246,9 +247,9 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Feather name="arrow-left" size={24} color="#005677" />
           </TouchableOpacity>
@@ -331,8 +332,8 @@ export default function SettingsScreen() {
         animationType="slide"
         presentationStyle="fullScreen"
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+        <SafeAreaView style={styles.modalContainer} edges={['bottom']}>
+          <View style={[styles.modalHeader, { paddingTop: insets.top + 16 }]}>
             <TouchableOpacity
               onPress={() => setShowLocationPicker(false)}
               style={styles.closeButton}
@@ -434,7 +435,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
@@ -531,7 +533,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
