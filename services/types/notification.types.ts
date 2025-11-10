@@ -21,10 +21,3 @@ export interface Notification {
   createdAt: string;
   readAt?: string;
 }
-
-export interface NotificationPreferences {
-  alertsNearby: boolean;
-  alertsResolved: boolean;
-  zoneUpdates: boolean;
-  systemNotifications: boolean;
-}

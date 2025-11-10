@@ -4,7 +4,7 @@
  */
 
 import { API_CONFIG, createHeaders } from './config/api.config';
-import { Notification, NotificationPreferences } from './types/notification.types';
+import { Notification } from './types/notification.types';
 
 class NotificationService {
   /**
@@ -124,59 +124,6 @@ class NotificationService {
       }
     } catch (error) {
       console.error('[NotificationService] Error deleting notification:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get notification preferences
-   */
-  async getPreferences(): Promise<NotificationPreferences> {
-    try {
-      const response = await fetch(
-        `${API_CONFIG.BASE_URL}/notifications/preferences`,
-        {
-          method: 'GET',
-          headers: await createHeaders('json'),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Error al obtener preferencias');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('[NotificationService] Error getting preferences:', error);
-      // Return default preferences if error
-      return {
-        alertsNearby: true,
-        alertsResolved: true,
-        zoneUpdates: true,
-        systemNotifications: true,
-      };
-    }
-  }
-
-  /**
-   * Update notification preferences
-   */
-  async updatePreferences(preferences: NotificationPreferences): Promise<void> {
-    try {
-      const response = await fetch(
-        `${API_CONFIG.BASE_URL}/notifications/preferences`,
-        {
-          method: 'PUT',
-          headers: await createHeaders('json'),
-          body: JSON.stringify(preferences),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Error al actualizar preferencias');
-      }
-    } catch (error) {
-      console.error('[NotificationService] Error updating preferences:', error);
       throw error;
     }
   }
