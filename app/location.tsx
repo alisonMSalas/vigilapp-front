@@ -447,15 +447,17 @@ export default function LocationScreen() {
             </ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={handleSkip}
-            disabled={loading}
-          >
-            <ThemedText style={styles.secondaryButtonText}>
-              Configurar más tarde
-            </ThemedText>
-          </TouchableOpacity>
+          {returnTo !== 'create-alert' && (
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={handleSkip}
+              disabled={loading}
+            >
+              <ThemedText style={styles.secondaryButtonText}>
+                Configurar más tarde
+              </ThemedText>
+            </TouchableOpacity>
+          )}
 
           <ThemedText style={styles.privacyText}>
             Tu ubicación solo se usará para mejorar tu experiencia. 

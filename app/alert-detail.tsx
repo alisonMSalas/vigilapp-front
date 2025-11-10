@@ -3,7 +3,7 @@ import { alertService, Alert as AlertType, AlertCategory, AlertStatus } from '@/
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AlertDetailScreen() {
@@ -224,18 +224,38 @@ export default function AlertDetailScreen() {
             <ThemedText style={styles.descriptionText}>{alert.description}</ThemedText>
           </View>
 
-          {/* Photo Evidence */}
-          <View style={styles.photoSection}>
-            <ThemedText style={styles.photoTitle}>Evidencia Fotográfica</ThemedText>
-            <View style={styles.photoGrid}>
-              <View style={styles.photoPlaceholder}>
-                <Feather name="camera" size={32} color="#ccc" />
-              </View>
-              <View style={styles.photoPlaceholder}>
-                <Feather name="camera" size={32} color="#ccc" />
-              </View>
+          {/* Media Evidence */}
+          {alert.media && alert.media.length > 0 && (
+            <View style={styles.photoSection}>
+              <ThemedText style={styles.photoTitle}>Evidencia adjunta</ThemedText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaScrollView}>
+                {alert.media.map((item) => (
+                  <View key={item.id} style={styles.mediaItemContainer}>
+                    <Image
+                      source={{ uri: alertService.getMediaUrl(item.url) }}
+                      style={styles.mediaThumb}
+                      resizeMode="cover"
+                    />
+                    {item.wasBlurred && (
+                      <View style={styles.blurBadge}>
+                        <Feather name="eye-off" size={12} color="#fff" />
+                      </View>
+                    )}
+                    {item.mimeType.startsWith('video') && (
+                      <View style={styles.videoBadge}>
+                        <Feather name="play-circle" size={24} color="#fff" />
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </ScrollView>
+              {alert.media.some(m => m.wasBlurred) && (
+                <ThemedText style={styles.blurNotice}>
+                  ℹ️ Algunas imágenes fueron procesadas para proteger la privacidad
+                </ThemedText>
+              )}
             </View>
-          </View>
+          )}
 
           {/* Validation Card */}
           <View style={styles.validationCard}>
@@ -459,6 +479,43 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  mediaScrollView: {
+    marginBottom: 12,
+  },
+  mediaItemContainer: {
+    marginRight: 12,
+    position: 'relative',
+  },
+  mediaThumb: {
+    width: 150,
+    height: 150,
+    borderRadius: 12,
+    backgroundColor: '#e0e0e0',
+  },
+  blurBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 12,
+    padding: 4,
+  },
+  videoBadge: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -12 }, { translateY: -12 }],
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 24,
+    padding: 4,
+  },
+  blurNotice: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 8,
   },
   validationCard: {
     margin: 20,

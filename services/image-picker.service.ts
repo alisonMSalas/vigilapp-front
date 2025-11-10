@@ -134,6 +134,67 @@ class ImagePickerService {
   }
 
   /**
+   * Pick multiple images/videos from gallery for evidence
+   *
+   * @param maxFiles - Maximum number of files to select (default: 5)
+   * @returns Result with selected files or error
+   */
+  async pickMultipleMedia(maxFiles: number = 5): Promise<{ success: boolean; files?: ImageAsset[]; error?: string }> {
+    try {
+      // Verify permissions
+      const hasPermission = await this.requestGalleryPermission();
+      if (!hasPermission) {
+        return {
+          success: false,
+          error: 'Se requieren permisos de galería para continuar',
+        };
+      }
+
+      // Open gallery with multiple selection
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images', 'videos'],
+        allowsMultipleSelection: true,
+        quality: 0.8,
+        videoMaxDuration: 30, // Maximum 30 seconds of video
+        selectionLimit: maxFiles, // Limit selection
+      });
+
+      if (result.canceled) {
+        return {
+          success: false,
+          error: 'Selección cancelada',
+        };
+      }
+
+      // Limit number of files
+      const assets = result.assets.slice(0, maxFiles);
+
+      // Map to ImageAsset
+      const files: ImageAsset[] = assets.map((asset, index) => ({
+        uri: asset.uri,
+        type: asset.type === 'video' ? 'video/mp4' : 'image/jpeg',
+        name:
+          asset.type === 'video'
+            ? `video_${Date.now()}_${index}.mp4`
+            : `image_${Date.now()}_${index}.jpg`,
+      }));
+
+      console.log(`[ImagePickerService] ✅ ${files.length} files selected`);
+
+      return {
+        success: true,
+        files,
+      };
+    } catch (error) {
+      console.error('[ImagePickerService] Error picking multiple media:', error);
+      return {
+        success: false,
+        error: 'Error al seleccionar archivos',
+      };
+    }
+  }
+
+  /**
    * Mostrar menú de opciones para elegir entre cámara o galería
    * (Implementación básica, en producción usar ActionSheet nativo)
    */

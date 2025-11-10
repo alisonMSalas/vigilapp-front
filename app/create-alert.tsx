@@ -1,6 +1,8 @@
 import { ThemedText } from '@/components/themed-text';
 import { alertService, AlertCategory } from '@/services/alert.service';
 import { locationCacheService } from '@/services/location-cache.service';
+import { imagePickerService } from '@/services/image-picker.service';
+import { ImageAsset } from '@/services/types/auth.types';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -8,6 +10,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Image,
     ScrollView,
     StyleSheet,
     Switch,
@@ -68,6 +71,7 @@ export default function CreateAlertScreen() {
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [radiusM, setRadiusM] = useState(1000);
   const [publishing, setPublishing] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<ImageAsset[]>([]);
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
@@ -125,6 +129,31 @@ export default function CreateAlertScreen() {
     return mapping[type];
   };
 
+  /**
+   * Handle media selection
+   */
+  const handleSelectMedia = async () => {
+    try {
+      const result = await imagePickerService.pickMultipleMedia(5);
+      if (result.success && result.files) {
+        setSelectedFiles(result.files);
+        console.log(`[CreateAlert] 📸 ${result.files.length} archivos seleccionados`);
+      } else if (result.error) {
+        Alert.alert('Error', result.error);
+      }
+    } catch (error) {
+      console.error('[CreateAlert] Error selecting media:', error);
+      Alert.alert('Error', 'No se pudieron seleccionar los archivos');
+    }
+  };
+
+  /**
+   * Remove a file from selection
+   */
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handlePublish = async () => {
     if (!selectedType || !title || !description) {
       Alert.alert('Error', 'Por favor completa todos los campos requeridos');
@@ -154,7 +183,14 @@ export default function CreateAlertScreen() {
         isAnonymous,
       };
 
-      await alertService.createAlert(alertData);
+      // Use endpoint with media if files are selected
+      if (selectedFiles.length > 0) {
+        await alertService.createAlertWithMedia(alertData, selectedFiles);
+        console.log(`[CreateAlert] ✅ Alerta creada con ${selectedFiles.length} archivos adjuntos`);
+      } else {
+        await alertService.createAlert(alertData);
+        console.log('[CreateAlert] ✅ Alerta creada sin archivos');
+      }
 
       Alert.alert(
         'Éxito',
@@ -289,12 +325,52 @@ export default function CreateAlertScreen() {
 
           {/* Add Photos/Videos */}
           <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Agregar Fotos/Videos</ThemedText>
-            <TouchableOpacity style={styles.photoArea}>
-              <Feather name="image" size={48} color="#ccc" />
-              <ThemedText style={styles.photoText}>Toca para agregar fotos</ThemedText>
-              <ThemedText style={styles.photoSubtext}>O arrastra y suelta aquí</ThemedText>
-            </TouchableOpacity>
+            <ThemedText style={styles.sectionTitle}>
+              Evidencia (Fotos/Videos){' '}
+              {selectedFiles.length > 0 && `(${selectedFiles.length}/5)`}
+            </ThemedText>
+
+            {selectedFiles.length > 0 ? (
+              <View>
+                <ScrollView
+                  horizontal
+                  style={styles.mediaPreviewContainer}
+                  showsHorizontalScrollIndicator={false}
+                >
+                  {selectedFiles.map((file, index) => (
+                    <View key={index} style={styles.mediaPreviewItem}>
+                      <Image source={{ uri: file.uri }} style={styles.mediaPreviewImage} />
+                      <TouchableOpacity
+                        style={styles.removeMediaButton}
+                        onPress={() => handleRemoveFile(index)}
+                      >
+                        <Feather name="x" size={16} color="#fff" />
+                      </TouchableOpacity>
+                      {file.type.startsWith('video') && (
+                        <View style={styles.videoIndicator}>
+                          <Feather name="video" size={16} color="#fff" />
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </ScrollView>
+                {selectedFiles.length < 5 && (
+                  <TouchableOpacity style={styles.addMoreButton} onPress={handleSelectMedia}>
+                    <Feather name="plus" size={20} color="#005677" />
+                    <ThemedText style={styles.addMoreText}>Agregar más</ThemedText>
+                  </TouchableOpacity>
+                )}
+                <ThemedText style={styles.blurNotice}>
+                  ℹ️ Las caras en las fotos serán difuminadas automáticamente
+                </ThemedText>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.photoArea} onPress={handleSelectMedia}>
+                <Feather name="image" size={48} color="#ccc" />
+                <ThemedText style={styles.photoText}>Toca para agregar fotos/videos</ThemedText>
+                <ThemedText style={styles.photoSubtext}>Máximo 5 archivos</ThemedText>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Location */}
@@ -643,6 +719,66 @@ const styles = StyleSheet.create({
     selectLocationSubtitle: {
       fontSize: 14,
       color: '#666',
+    },
+    mediaPreviewContainer: {
+      marginBottom: 12,
+    },
+    mediaPreviewItem: {
+      width: 120,
+      height: 120,
+      marginRight: 12,
+      borderRadius: 8,
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    mediaPreviewImage: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: '#e0e0e0',
+    },
+    removeMediaButton: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      borderRadius: 12,
+      width: 24,
+      height: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    videoIndicator: {
+      position: 'absolute',
+      bottom: 4,
+      right: 4,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      borderRadius: 12,
+      padding: 4,
+    },
+    addMoreButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: '#f8f9fa',
+      borderRadius: 8,
+      borderWidth: 2,
+      borderColor: '#005677',
+      borderStyle: 'dashed',
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      marginBottom: 12,
+    },
+    addMoreText: {
+      color: '#005677',
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    blurNotice: {
+      fontSize: 12,
+      color: '#666',
+      textAlign: 'center',
+      fontStyle: 'italic',
     },
 });
 
