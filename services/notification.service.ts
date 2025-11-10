@@ -1,151 +1,186 @@
 /**
- * Servicio de notificaciones nativas
- * Maneja notificaciones locales usando expo-notifications
+ * Notification Service
+ * Handles all notification-related API calls
  */
 
-import * as Notifications from 'expo-notifications';
-import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
-
-// Configurar comportamiento de notificaciones
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+import { API_CONFIG, createHeaders } from './config/api.config';
+import { Notification, NotificationPreferences } from './types/notification.types';
 
 class NotificationService {
   /**
-   * Solicitar permisos de notificaciones
+   * Get all notifications for the current user
    */
-  async requestPermissions(): Promise<boolean> {
+  async getNotifications(page: number = 0, size: number = 20): Promise<Notification[]> {
     try {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-
-      if (finalStatus !== 'granted') {
-        console.log('[NotificationService] ⚠️ Permisos de notificación denegados');
-        return false;
-      }
-
-      // Configurar canal de notificaciones en Android
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('alerts', {
-          name: 'Alertas de VigilApp',
-          importance: Notifications.AndroidImportance.HIGH,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#005677',
-          sound: 'default',
-        });
-      }
-
-      console.log('[NotificationService] ✅ Permisos de notificación otorgados');
-      return true;
-    } catch (error) {
-      console.error('[NotificationService] ❌ Error solicitando permisos:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Mostrar notificación de nueva alerta
-   */
-  async showAlertNotification(
-    title: string,
-    body: string,
-    category: string,
-    alertId: string
-  ): Promise<void> {
-    try {
-      // Vibrar
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-
-      // Obtener ícono según categoría
-      const icon = this.getCategoryIcon(category);
-
-      // Mostrar notificación
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: `${icon} Nueva Alerta`,
-          body: `${title}\n${body}`,
-          data: {
-            alertId,
-            category,
-            type: 'alert',
-          },
-          sound: 'default',
-          priority: Notifications.AndroidNotificationPriority.HIGH,
-          badge: 1,
-        },
-        trigger: null, // Mostrar inmediatamente
+      const params = new URLSearchParams({
+        page: page.toString(),
+        size: size.toString(),
       });
 
-      console.log('[NotificationService] ✅ Notificación mostrada:', title);
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/notifications?${params}`,
+        {
+          method: 'GET',
+          headers: await createHeaders('json'),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al obtener notificaciones');
+      }
+
+      const data = await response.json();
+      return data.content || data; // Handle Spring pagination
     } catch (error) {
-      console.error('[NotificationService] ❌ Error mostrando notificación:', error);
+      console.error('[NotificationService] Error getting notifications:', error);
+      throw error;
     }
   }
 
   /**
-   * Obtener el ícono correcto según la categoría
+   * Get unread notifications count
    */
-  private getCategoryIcon(category: string): string {
-    const icons: Record<string, string> = {
-      EMERGENCY: '🚨',
-      PRECAUTION: '⚠️',
-      INFO: 'ℹ️',
-      COMMUNITY: '👥',
-    };
-    return icons[category] || '🔔';
-  }
-
-  /**
-   * Limpiar todas las notificaciones
-   */
-  async clearAll(): Promise<void> {
+  async getUnreadCount(): Promise<number> {
     try {
-      await Notifications.dismissAllNotificationsAsync();
-      console.log('[NotificationService] ✅ Notificaciones limpiadas');
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/notifications/unread/count`,
+        {
+          method: 'GET',
+          headers: await createHeaders('json'),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al obtener contador de notificaciones');
+      }
+
+      const data = await response.json();
+      return data.count || 0;
     } catch (error) {
-      console.error('[NotificationService] ❌ Error limpiando notificaciones:', error);
+      console.error('[NotificationService] Error getting unread count:', error);
+      return 0;
     }
   }
 
   /**
-   * Verificar si hay permisos
+   * Mark a notification as read
    */
-  async hasPermissions(): Promise<boolean> {
-    const { status } = await Notifications.getPermissionsAsync();
-    return status === 'granted';
+  async markAsRead(notificationId: string): Promise<void> {
+    try {
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/notifications/${notificationId}/read`,
+        {
+          method: 'PUT',
+          headers: await createHeaders('json'),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al marcar notificación como leída');
+      }
+    } catch (error) {
+      console.error('[NotificationService] Error marking as read:', error);
+      throw error;
+    }
   }
 
   /**
-   * Agregar listener para cuando se toca una notificación
-   * Retorna función para remover el listener
+   * Mark all notifications as read
    */
-  addNotificationResponseListener(
-    callback: (response: Notifications.NotificationResponse) => void
-  ): () => void {
-    const subscription = Notifications.addNotificationResponseReceivedListener(callback);
-    return () => {
-      Notifications.removeNotificationSubscription(subscription);
-    };
+  async markAllAsRead(): Promise<void> {
+    try {
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/notifications/read-all`,
+        {
+          method: 'PUT',
+          headers: await createHeaders('json'),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al marcar todas como leídas');
+      }
+    } catch (error) {
+      console.error('[NotificationService] Error marking all as read:', error);
+      throw error;
+    }
   }
 
   /**
-   * Obtener la última notificación que se tocó (útil para deep linking)
+   * Delete a notification
    */
-  async getLastNotificationResponse(): Promise<Notifications.NotificationResponse | null> {
-    return await Notifications.getLastNotificationResponseAsync();
+  async deleteNotification(notificationId: string): Promise<void> {
+    try {
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/notifications/${notificationId}`,
+        {
+          method: 'DELETE',
+          headers: await createHeaders('json'),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar notificación');
+      }
+    } catch (error) {
+      console.error('[NotificationService] Error deleting notification:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get notification preferences
+   */
+  async getPreferences(): Promise<NotificationPreferences> {
+    try {
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/notifications/preferences`,
+        {
+          method: 'GET',
+          headers: await createHeaders('json'),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al obtener preferencias');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('[NotificationService] Error getting preferences:', error);
+      // Return default preferences if error
+      return {
+        alertsNearby: true,
+        alertsResolved: true,
+        zoneUpdates: true,
+        systemNotifications: true,
+      };
+    }
+  }
+
+  /**
+   * Update notification preferences
+   */
+  async updatePreferences(preferences: NotificationPreferences): Promise<void> {
+    try {
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/notifications/preferences`,
+        {
+          method: 'PUT',
+          headers: await createHeaders('json'),
+          body: JSON.stringify(preferences),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al actualizar preferencias');
+      }
+    } catch (error) {
+      console.error('[NotificationService] Error updating preferences:', error);
+      throw error;
+    }
   }
 }
 
+// Export singleton instance
 export const notificationService = new NotificationService();
-export default notificationService;
