@@ -1,8 +1,20 @@
 import { API_CONFIG, createHeaders } from './config/api.config';
+import { ImageAsset } from './types/auth.types';
 
 export type AlertCategory = 'EMERGENCY' | 'PRECAUTION' | 'INFO' | 'COMMUNITY';
 export type AlertStatus = 'ACTIVE' | 'RESOLVED' | 'CANCELLED' | 'EXPIRED';
 export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
+
+/**
+ * Media attachment DTO
+ */
+export interface MediaDto {
+  id: string;
+  url: string; // Relative URL to fetch the file
+  mimeType: string;
+  wasBlurred: boolean; // Indicates if faces were blurred
+  createdAt: string;
+}
 
 export interface Alert {
   id: string;
@@ -22,6 +34,7 @@ export interface Alert {
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
+  media?: MediaDto[]; // Media attachments
 }
 
 export interface SaveAlertDto {
@@ -216,6 +229,72 @@ class AlertService {
       console.error('Error getting recent alerts:', error);
       throw error;
     }
+  }
+
+  /**
+   * Create alert with media attachments (evidence).
+   * Images will be automatically processed to blur faces.
+   *
+   * @param data - Alert data
+   * @param files - Array of image/video files (max 5)
+   * @returns Created alert with media attachments
+   */
+  async createAlertWithMedia(
+    data: SaveAlertDto,
+    files: ImageAsset[]
+  ): Promise<Alert> {
+    try {
+      const formData = new FormData();
+
+      // Add alert data as JSON blob
+      const alertBlob = new Blob([JSON.stringify(data)], {
+        type: 'application/json',
+      });
+      formData.append('alert', alertBlob, 'alert.json');
+
+      // Add files
+      if (files && files.length > 0) {
+        files.forEach((file) => {
+          // For React Native/Expo, we need to create a proper file object
+          const fileData = {
+            uri: file.uri,
+            name: file.name,
+            type: file.type,
+          } as any;
+
+          formData.append('files', fileData);
+        });
+      }
+
+      // Get headers but remove Content-Type to let browser set it with boundary
+      const headers = await createHeaders('multipart');
+      delete headers['Content-Type'];
+
+      const response = await fetch(`${API_CONFIG.BASE_URL}/alerts/with-media`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error al crear alerta con media: ${errorText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('[AlertService] Error creating alert with media:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get media URL for displaying
+   */
+  getMediaUrl(relativePath: string): string {
+    // Remove /api from BASE_URL and add the relative path
+    const baseUrl = API_CONFIG.BASE_URL.replace('/api', '');
+    return `${baseUrl}${relativePath}`;
   }
 }
 
