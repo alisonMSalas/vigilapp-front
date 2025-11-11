@@ -21,7 +21,7 @@ export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Función helper para navegar hacia atrás de forma segura
+  // Funciï¿½n helper para navegar hacia atrï¿½s de forma segura
   const safeGoBack = () => {
     if (router.canGoBack()) {
       router.back();
@@ -36,13 +36,14 @@ export default function NotificationsScreen() {
 
   const loadNotifications = async () => {
     try {
-      console.log('[Notifications] =å Cargando notificaciones...');
+      console.log('[Notifications] =ï¿½ Cargando notificaciones...');
       const data = await notificationService.getNotifications();
       console.log('[Notifications]  Notificaciones cargadas:', data.length);
       setNotifications(data);
     } catch (error) {
-      console.error('[Notifications] L Error cargando notificaciones:', error);
-      Alert.alert('Error', 'No se pudieron cargar las notificaciones');
+      console.error('[Notifications] âŒ Error cargando notificaciones:', error);
+      // Don't show alert - service already handles errors gracefully
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -85,17 +86,17 @@ export default function NotificationsScreen() {
       setNotifications((prev) =>
         prev.map((n) => ({ ...n, isRead: true }))
       );
-      Alert.alert('Éxito', 'Todas las notificaciones han sido marcadas como leídas');
+      Alert.alert('ï¿½xito', 'Todas las notificaciones han sido marcadas como leï¿½das');
     } catch (error) {
       console.error('[Notifications] Error marking all as read:', error);
-      Alert.alert('Error', 'No se pudieron marcar las notificaciones como leídas');
+      Alert.alert('Error', 'No se pudieron marcar las notificaciones como leï¿½das');
     }
   };
 
   const handleDeleteNotification = async (notificationId: string) => {
     Alert.alert(
-      'Eliminar notificación',
-      '¿Estás seguro de que deseas eliminar esta notificación?',
+      'Eliminar notificaciï¿½n',
+      'ï¿½Estï¿½s seguro de que deseas eliminar esta notificaciï¿½n?',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -107,7 +108,7 @@ export default function NotificationsScreen() {
               setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
             } catch (error) {
               console.error('[Notifications] Error deleting notification:', error);
-              Alert.alert('Error', 'No se pudo eliminar la notificación');
+              Alert.alert('Error', 'No se pudo eliminar la notificaciï¿½n');
             }
           },
         },
@@ -161,7 +162,7 @@ export default function NotificationsScreen() {
     if (minutes < 1) return 'Ahora';
     if (minutes < 60) return `Hace ${minutes} min`;
     if (hours < 24) return `Hace ${hours} hora${hours > 1 ? 's' : ''}`;
-    if (days < 7) return `Hace ${days} día${days > 1 ? 's' : ''}`;
+    if (days < 7) return `Hace ${days} dï¿½a${days > 1 ? 's' : ''}`;
     return date.toLocaleDateString();
   };
 
@@ -204,7 +205,7 @@ export default function NotificationsScreen() {
       <Feather name="bell-off" size={64} color="#ccc" />
       <ThemedText style={styles.emptyTitle}>No hay notificaciones</ThemedText>
       <ThemedText style={styles.emptySubtext}>
-        Cuando recibas alertas o actualizaciones, aparecerán aquí
+        Cuando recibas alertas o actualizaciones, aparecerÃ¡n aquÃ­
       </ThemedText>
     </View>
   );

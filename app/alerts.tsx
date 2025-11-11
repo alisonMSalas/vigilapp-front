@@ -54,7 +54,13 @@ export default function AlertsScreen() {
     try {
       setLoading(true);
       const myZoneAlerts = await alertService.getMyZoneAlerts();
-      const mappedAlerts = myZoneAlerts.map(alert => mapAlertToFrontend(alert));
+
+      // Sort by createdAt descending (newest first)
+      const sortedAlerts = [...myZoneAlerts].sort((a, b) => {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+
+      const mappedAlerts = sortedAlerts.map(alert => mapAlertToFrontend(alert));
       setAlerts(mappedAlerts);
       console.log('[Alerts] ✅ Alertas cargadas:', mappedAlerts.length);
     } catch (error) {
@@ -177,10 +183,14 @@ export default function AlertsScreen() {
     router.replace('/login');
   };
 
+  const handleNotificationsPress = () => {
+    router.push('/notifications');
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.container}>
-        <TopHeader notificationsCount={0} onLogout={handleLogout} />
+        <TopHeader notificationsCount={0} onLogout={handleLogout} onPressNotifications={handleNotificationsPress} />
 
         {loading && (
           <View style={styles.loadingContainer}>

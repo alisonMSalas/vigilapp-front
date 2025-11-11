@@ -18,7 +18,7 @@ import {
     View
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Address {
   display_name: string;
@@ -48,6 +48,7 @@ export default function LocationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const returnTo = params.returnTo as string;
+  const insets = useSafeAreaInsets();
 
   // Función helper para navegar hacia atrás de forma segura
   const safeGoBack = () => {
@@ -473,8 +474,8 @@ export default function LocationScreen() {
         presentationStyle="fullScreen"
         onRequestClose={() => setShowManualPicker(false)}
       >
-        <SafeAreaView style={styles.modalContainer} edges={['top', 'left', 'right']}>
-          <View style={styles.modalHeader}>
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalHeader, { paddingTop: insets.top + 16 }]}>
             <TouchableOpacity
               onPress={() => setShowManualPicker(false)}
               style={styles.closeButton}
@@ -607,7 +608,7 @@ export default function LocationScreen() {
             </View>
           )}
           </ScrollView>
-        </SafeAreaView>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -743,9 +744,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    backgroundColor: '#fff',
   },
   modalContent: {
     flex: 1,

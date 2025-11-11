@@ -1,12 +1,82 @@
 /**
  * Notification Service
- * Handles all notification-related API calls
+ * Handles all notification-related API calls and push notifications
  */
 
+import * as ExpoNotifications from 'expo-notifications';
+import { Platform } from 'react-native';
 import { API_CONFIG, createHeaders } from './config/api.config';
 import { Notification } from './types/notification.types';
+import { AlertCategory } from './alert.service';
+
+// Configure how notifications should be displayed
+ExpoNotifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 class NotificationService {
+  /**
+   * Check if the app has notification permissions
+   */
+  async hasPermissions(): Promise<boolean> {
+    try {
+      const { status } = await ExpoNotifications.getPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.error('[NotificationService] Error checking permissions:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Request notification permissions from the user
+   */
+  async requestPermissions(): Promise<boolean> {
+    try {
+      const { status } = await ExpoNotifications.requestPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.error('[NotificationService] Error requesting permissions:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Show a local notification for a new alert
+   */
+  async showAlertNotification(
+    title: string,
+    body: string,
+    category: AlertCategory,
+    alertId: string
+  ): Promise<void> {
+    try {
+      // Validate inputs
+      if (!title || !body) {
+        console.error('[NotificationService] Cannot show notification: title or body is missing');
+        return;
+      }
+
+      await ExpoNotifications.scheduleNotificationAsync({
+        content: {
+          title: String(title),
+          body: String(body),
+          data: { alertId, category },
+          sound: true,
+          priority: ExpoNotifications.AndroidNotificationPriority.HIGH,
+        },
+        trigger: null, // Show immediately
+      });
+
+      console.log('[NotificationService] ✅ Notification shown:', title);
+    } catch (error) {
+      console.error('[NotificationService] Error showing notification:', error);
+    }
+  }
   /**
    * Get all notifications for the current user
    */
@@ -26,6 +96,13 @@ class NotificationService {
       );
 
       if (!response.ok) {
+        // If endpoint doesn't exist (404) or not implemented (501), return empty array
+        if (response.status === 404 || response.status === 501) {
+          console.log('[NotificationService] ℹ️ Endpoint de notificaciones no disponible aún');
+          return [];
+        }
+        const errorText = await response.text().catch(() => '');
+        console.error('[NotificationService] Error response:', response.status, errorText);
         throw new Error('Error al obtener notificaciones');
       }
 
@@ -33,7 +110,8 @@ class NotificationService {
       return data.content || data; // Handle Spring pagination
     } catch (error) {
       console.error('[NotificationService] Error getting notifications:', error);
-      throw error;
+      // Return empty array instead of throwing to allow UI to work
+      return [];
     }
   }
 

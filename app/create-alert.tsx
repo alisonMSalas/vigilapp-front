@@ -204,7 +204,8 @@ export default function CreateAlertScreen() {
       );
     } catch (error) {
       console.error('Error publishing alert:', error);
-      Alert.alert('Error', 'No se pudo publicar la alerta. Intenta de nuevo.');
+      const errorMessage = error instanceof Error ? error.message : 'No se pudo publicar la alerta. Intenta de nuevo.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setPublishing(false);
     }
@@ -325,10 +326,17 @@ export default function CreateAlertScreen() {
 
           {/* Add Photos/Videos */}
           <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>
-              Evidencia (Fotos/Videos){' '}
-              {selectedFiles.length > 0 && `(${selectedFiles.length}/5)`}
-            </ThemedText>
+            <View style={styles.sectionTitleRow}>
+              <ThemedText style={styles.sectionTitle}>
+                Evidencia (Fotos/Videos){' '}
+                {selectedFiles.length > 0 && `(${selectedFiles.length}/5)`}
+              </ThemedText>
+              {selectedFiles.length > 0 && (
+                <ThemedText style={styles.totalSize}>
+                  {(selectedFiles.reduce((sum, f) => sum + (f.fileSize || 0), 0) / (1024 * 1024)).toFixed(1)}MB
+                </ThemedText>
+              )}
+            </View>
 
             {selectedFiles.length > 0 ? (
               <View>
@@ -349,6 +357,13 @@ export default function CreateAlertScreen() {
                       {file.type.startsWith('video') && (
                         <View style={styles.videoIndicator}>
                           <Feather name="video" size={16} color="#fff" />
+                        </View>
+                      )}
+                      {file.fileSize && (
+                        <View style={styles.fileSizeIndicator}>
+                          <ThemedText style={styles.fileSizeText}>
+                            {(file.fileSize / (1024 * 1024)).toFixed(1)}MB
+                          </ThemedText>
                         </View>
                       )}
                     </View>
@@ -514,6 +529,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
     marginBottom: 16,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  totalSize: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#005677',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   alertTypesGrid: {
     flexDirection: 'row',
@@ -754,6 +784,20 @@ const styles = StyleSheet.create({
       backgroundColor: 'rgba(0,0,0,0.7)',
       borderRadius: 12,
       padding: 4,
+    },
+    fileSizeIndicator: {
+      position: 'absolute',
+      bottom: 4,
+      left: 4,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      borderRadius: 8,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+    },
+    fileSizeText: {
+      fontSize: 10,
+      color: '#fff',
+      fontWeight: '600',
     },
     addMoreButton: {
       flexDirection: 'row',

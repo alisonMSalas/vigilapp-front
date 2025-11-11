@@ -75,6 +75,7 @@ class ImagePickerService {
           uri: asset.uri,
           type: asset.type || 'image/jpeg',
           name: `photo_${Date.now()}.jpg`,
+          fileSize: asset.fileSize,
         },
       };
     } catch (error) {
@@ -122,6 +123,7 @@ class ImagePickerService {
           uri: asset.uri,
           type: asset.type || 'image/jpeg',
           name: `image_${Date.now()}.jpg`,
+          fileSize: asset.fileSize,
         },
       };
     } catch (error) {
@@ -137,9 +139,13 @@ class ImagePickerService {
    * Pick multiple images/videos from gallery for evidence
    *
    * @param maxFiles - Maximum number of files to select (default: 5)
+   * @param maxSizeMB - Maximum file size in MB per file (default: 10MB)
    * @returns Result with selected files or error
    */
-  async pickMultipleMedia(maxFiles: number = 5): Promise<{ success: boolean; files?: ImageAsset[]; error?: string }> {
+  async pickMultipleMedia(
+    maxFiles: number = 5,
+    maxSizeMB: number = 10
+  ): Promise<{ success: boolean; files?: ImageAsset[]; error?: string }> {
     try {
       // Verify permissions
       const hasPermission = await this.requestGalleryPermission();
@@ -169,17 +175,45 @@ class ImagePickerService {
       // Limit number of files
       const assets = result.assets.slice(0, maxFiles);
 
-      // Map to ImageAsset
-      const files: ImageAsset[] = assets.map((asset, index) => ({
-        uri: asset.uri,
-        type: asset.type === 'video' ? 'video/mp4' : 'image/jpeg',
-        name:
-          asset.type === 'video'
-            ? `video_${Date.now()}_${index}.mp4`
-            : `image_${Date.now()}_${index}.jpg`,
-      }));
+      // Validate file sizes
+      const maxSizeBytes = maxSizeMB * 1024 * 1024;
+      const oversizedFiles: string[] = [];
 
-      console.log(`[ImagePickerService] ✅ ${files.length} files selected`);
+      // Map to ImageAsset and validate sizes
+      const files: ImageAsset[] = assets
+        .map((asset, index) => {
+          const fileSize = asset.fileSize || 0;
+          const fileName = asset.type === 'video'
+            ? `video_${Date.now()}_${index}.mp4`
+            : `image_${Date.now()}_${index}.jpg`;
+
+          // Check if file exceeds max size
+          if (fileSize > maxSizeBytes) {
+            const sizeMB = (fileSize / (1024 * 1024)).toFixed(1);
+            oversizedFiles.push(`${fileName} (${sizeMB}MB)`);
+            return null;
+          }
+
+          return {
+            uri: asset.uri,
+            type: asset.type === 'video' ? 'video/mp4' : 'image/jpeg',
+            name: fileName,
+            fileSize,
+          };
+        })
+        .filter((file): file is ImageAsset => file !== null);
+
+      // If there are oversized files, return error
+      if (oversizedFiles.length > 0) {
+        return {
+          success: false,
+          error: `Los siguientes archivos exceden el tamaño máximo de ${maxSizeMB}MB:\n${oversizedFiles.join('\n')}\n\nPor favor, selecciona archivos más pequeños.`,
+        };
+      }
+
+      // Calculate total size
+      const totalSizeMB = files.reduce((sum, file) => sum + (file.fileSize || 0), 0) / (1024 * 1024);
+      console.log(`[ImagePickerService] ✅ ${files.length} files selected (${totalSizeMB.toFixed(2)}MB total)`);
 
       return {
         success: true,

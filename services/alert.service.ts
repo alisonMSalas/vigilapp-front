@@ -246,27 +246,21 @@ class AlertService {
     try {
       const formData = new FormData();
 
-      // Add alert data as JSON blob
-      const alertBlob = new Blob([JSON.stringify(data)], {
-        type: 'application/json',
-      });
-      formData.append('alert', alertBlob, 'alert.json');
+      // Add alert data as JSON string (not Blob - React Native doesn't handle Blobs well)
+      formData.append('alert', JSON.stringify(data));
 
-      // Add files
+      // Add files - React Native FormData expects objects with uri, name, and type
       if (files && files.length > 0) {
         files.forEach((file) => {
-          // For React Native/Expo, we need to create a proper file object
-          const fileData = {
+          formData.append('files', {
             uri: file.uri,
             name: file.name,
             type: file.type,
-          } as any;
-
-          formData.append('files', fileData);
+          } as any);
         });
       }
 
-      // Get headers but remove Content-Type to let browser set it with boundary
+      // Get headers but remove Content-Type to let the platform set it with boundary
       const headers = await createHeaders('multipart');
       delete headers['Content-Type'];
 
@@ -278,7 +272,26 @@ class AlertService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Error al crear alerta con media: ${errorText}`);
+
+        // Parse error response
+        try {
+          const errorJson = JSON.parse(errorText);
+
+          // Handle file size exceeded error
+          if (errorJson.details?.includes('Maximum upload size exceeded') ||
+              errorJson.message?.includes('Maximum upload size exceeded')) {
+            throw new Error('Los archivos seleccionados son demasiado grandes. Por favor, selecciona archivos más pequeños (máximo 10MB por archivo).');
+          }
+
+          // Handle other errors with message from backend
+          throw new Error(errorJson.message || errorJson.error || 'Error al crear alerta');
+        } catch (parseError) {
+          // If error is not JSON, throw original error text
+          if (errorText.includes('Maximum upload size exceeded')) {
+            throw new Error('Los archivos seleccionados son demasiado grandes. Por favor, selecciona archivos más pequeños (máximo 10MB por archivo).');
+          }
+          throw new Error(`Error al crear alerta: ${errorText}`);
+        }
       }
 
       return await response.json();
