@@ -81,8 +81,29 @@ class UserZoneService {
         headers: await createHeaders("json"),
       });
 
+      // Usuario no tiene zona configurada
       if (response.status === 404) {
-        return null; // Usuario no tiene zona configurada
+        console.log("[UserZoneService] ℹ️ User has no zone configured (404)");
+        return null;
+      }
+
+      // Access denied - treat as if user has no zone (token might be invalid)
+      if (response.status === 401 || response.status === 403) {
+        console.log("[UserZoneService] ⚠️ Access denied (401/403) - treating as no zone");
+        return null;
+      }
+
+      // Server error with "Access Denied" - also treat as no zone
+      if (response.status === 500) {
+        try {
+          const errorData = await response.json();
+          if (errorData.details?.includes("Access Denied")) {
+            console.log("[UserZoneService] ⚠️ Access Denied (500) - treating as no zone");
+            return null;
+          }
+        } catch {
+          // Continue with normal error handling
+        }
       }
 
       if (!response.ok) {
@@ -92,10 +113,8 @@ class UserZoneService {
             "[UserZoneService] ❌ Error getting user zone:",
             apiError
           );
-          throw new Error(
-            apiError.message ||
-              `Error al obtener zona (status ${response.status})`
-          );
+          // Return null instead of throwing to allow app to continue
+          return null;
         } catch (e) {
           const text = await response.text().catch(() => "");
           console.error(
@@ -103,9 +122,8 @@ class UserZoneService {
             response.status,
             text
           );
-          throw new Error(
-            text || `Error al obtener zona (status ${response.status})`
-          );
+          // Return null instead of throwing
+          return null;
         }
       }
 
@@ -115,8 +133,8 @@ class UserZoneService {
         "[UserZoneService] ❌ Error getting user zone (CATCH):",
         error
       );
-      if (error instanceof Error) throw error;
-      throw new Error("Error al obtener zona del usuario");
+      // Return null instead of throwing to allow app to continue
+      return null;
     }
   }
 

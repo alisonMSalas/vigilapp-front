@@ -42,6 +42,7 @@ export interface ImageAsset {
   uri: string;
   type: string;
   name: string;
+  fileSize?: number;
 }
 
 /**

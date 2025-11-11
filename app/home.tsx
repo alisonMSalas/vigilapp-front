@@ -130,8 +130,13 @@ export default function HomeScreen() {
       try {
         const myZoneAlerts = await alertService.getMyZoneAlerts();
 
+        // Sort by createdAt descending (newest first)
+        const sortedAlerts = [...myZoneAlerts].sort((a, b) => {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+
         // Mapear alertas del backend al formato del frontend
-        const mappedAlerts = myZoneAlerts.map((alert) =>
+        const mappedAlerts = sortedAlerts.map((alert) =>
           mapAlertToFrontend(alert)
         );
         setAlerts(mappedAlerts);
@@ -345,6 +350,10 @@ export default function HomeScreen() {
     router.replace("/login");
   };
 
+  const handleNotificationsPress = () => {
+    router.push("/notifications");
+  };
+
   const getAlertIconColor = (type: AlertData["type"]) => {
     switch (type) {
       case "emergency":
@@ -366,6 +375,7 @@ export default function HomeScreen() {
         <TopHeader
           notificationsCount={newAlertsCount}
           onLogout={handleLogout}
+          onPressNotifications={handleNotificationsPress}
         />
 
         {loading && (

@@ -3,14 +3,17 @@ import { alertService, Alert as AlertType, AlertCategory, AlertStatus } from '@/
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Image, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function AlertDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const [alert, setAlert] = useState<AlertType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewingMediaIndex, setViewingMediaIndex] = useState<number | null>(null);
   const insets = useSafeAreaInsets();
 
   // Función helper para navegar hacia atrás de forma segura
@@ -229,8 +232,13 @@ export default function AlertDetailScreen() {
             <View style={styles.photoSection}>
               <ThemedText style={styles.photoTitle}>Evidencia adjunta</ThemedText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaScrollView}>
-                {alert.media.map((item) => (
-                  <View key={item.id} style={styles.mediaItemContainer}>
+                {alert.media.map((item, index) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.mediaItemContainer}
+                    onPress={() => setViewingMediaIndex(index)}
+                    activeOpacity={0.8}
+                  >
                     <Image
                       source={{ uri: alertService.getMediaUrl(item.url) }}
                       style={styles.mediaThumb}
@@ -246,7 +254,7 @@ export default function AlertDetailScreen() {
                         <Feather name="play-circle" size={24} color="#fff" />
                       </View>
                     )}
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
               {alert.media.some(m => m.wasBlurred) && (
@@ -296,6 +304,84 @@ export default function AlertDetailScreen() {
           </View>
         </ScrollView>
       </View>
+
+      {/* Full-screen Image Viewer Modal */}
+      {viewingMediaIndex !== null && alert?.media && (
+        <Modal
+          visible={true}
+          transparent={false}
+          animationType="fade"
+          onRequestClose={() => setViewingMediaIndex(null)}
+        >
+          <View style={styles.imageViewerContainer}>
+            {/* Header */}
+            <View style={[styles.imageViewerHeader, { paddingTop: insets.top + 16 }]}>
+              <TouchableOpacity
+                onPress={() => setViewingMediaIndex(null)}
+                style={styles.closeViewerButton}
+              >
+                <Feather name="x" size={28} color="#fff" />
+              </TouchableOpacity>
+              <ThemedText style={styles.imageViewerTitle}>
+                {viewingMediaIndex + 1} / {alert.media.length}
+              </ThemedText>
+              <View style={styles.imageViewerPlaceholder} />
+            </View>
+
+            {/* Image */}
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) => {
+                const newIndex = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                setViewingMediaIndex(newIndex);
+              }}
+              contentOffset={{ x: viewingMediaIndex * SCREEN_WIDTH, y: 0 }}
+            >
+              {alert.media.map((item, index) => (
+                <View key={item.id} style={styles.imageViewerSlide}>
+                  <Image
+                    source={{ uri: alertService.getMediaUrl(item.url) }}
+                    style={styles.imageViewerImage}
+                    resizeMode="contain"
+                  />
+                  {item.wasBlurred && (
+                    <View style={styles.imageViewerBadge}>
+                      <Feather name="eye-off" size={16} color="#fff" />
+                      <ThemedText style={styles.imageViewerBadgeText}>
+                        Imagen procesada para proteger privacidad
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Navigation Arrows */}
+            {alert.media.length > 1 && (
+              <>
+                {viewingMediaIndex > 0 && (
+                  <TouchableOpacity
+                    style={[styles.navArrow, styles.navArrowLeft]}
+                    onPress={() => setViewingMediaIndex(viewingMediaIndex - 1)}
+                  >
+                    <Feather name="chevron-left" size={32} color="#fff" />
+                  </TouchableOpacity>
+                )}
+                {viewingMediaIndex < alert.media.length - 1 && (
+                  <TouchableOpacity
+                    style={[styles.navArrow, styles.navArrowRight]}
+                    onPress={() => setViewingMediaIndex(viewingMediaIndex + 1)}
+                  >
+                    <Feather name="chevron-right" size={32} color="#fff" />
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -591,6 +677,79 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 12,
     color: '#666',
+  },
+  imageViewerContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  imageViewerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  closeViewerButton: {
+    padding: 8,
+  },
+  imageViewerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  imageViewerPlaceholder: {
+    width: 44,
+  },
+  imageViewerSlide: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageViewerImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  },
+  imageViewerBadge: {
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  imageViewerBadgeText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#fff',
+  },
+  navArrow: {
+    position: 'absolute',
+    top: '50%',
+    transform: [{ translateY: -28 }],
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navArrowLeft: {
+    left: 20,
+  },
+  navArrowRight: {
+    right: 20,
   },
 });
 
