@@ -6,6 +6,22 @@ export type AlertStatus = 'ACTIVE' | 'RESOLVED' | 'CANCELLED' | 'EXPIRED';
 export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 
 /**
+ * Alert Statistics DTO
+ */
+export interface AlertStats {
+  totalAlerts: number;
+  activeAlerts: number;
+  resolvedAlerts: number;
+  cancelledAlerts: number;
+  alertsByCategory: Record<string, number>;
+  alertsByVerificationStatus: Record<string, number>;
+  falseReportsPercentage: number;
+  totalUsers: number;
+  activeUsers: number;
+  timeRange: string;
+}
+
+/**
  * Media attachment DTO
  */
 export interface MediaDto {
@@ -308,6 +324,33 @@ class AlertService {
     // Remove /api from BASE_URL and add the relative path
     const baseUrl = API_CONFIG.BASE_URL.replace('/api', '');
     return `${baseUrl}${relativePath}`;
+  }
+
+  /**
+   * Get alert statistics
+   */
+  async getAlertStats(timeRange: string = '7d', cityId?: string): Promise<AlertStats> {
+    try {
+      const params = new URLSearchParams({ timeRange });
+      if (cityId) params.append('cityId', cityId);
+
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/alerts/stats?${params}`,
+        {
+          method: 'GET',
+          headers: await createHeaders('json'),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al obtener estadísticas');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('[AlertService] Error getting stats:', error);
+      throw error;
+    }
   }
 }
 

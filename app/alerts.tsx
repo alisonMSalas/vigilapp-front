@@ -1,7 +1,7 @@
-import BottomNavbar, { BottomTabKey } from "@/components/BottomNavbar";
-import TopHeader from "@/components/TopHeader";
 import AlertCard from "@/components/AlertCard";
+import BottomNavbar, { BottomTabKey } from "@/components/BottomNavbar";
 import { ThemedText } from "@/components/themed-text";
+import TopHeader from "@/components/TopHeader";
 import {
   AlertCategory,
   alertService,

@@ -3,6 +3,7 @@ import { notificationService } from '@/services/notification.service';
 import { Notification, NotificationType } from '@/services/types/notification.types';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,7 +15,6 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -172,15 +172,6 @@ export default function NotificationsScreen() {
     const color = getNotificationColor(item.type);
     const icon = getNotificationIcon(item.type);
 
-    // Debug logging
-    console.log('[NotificationItem]', {
-      id: item.id,
-      title: item.title,
-      message: item.message,
-      hasTitle: !!item.title,
-      hasMessage: !!item.message,
-    });
-
     return (
       <TouchableOpacity
         style={[styles.notificationItem, !item.isRead && styles.notificationUnread]}
@@ -233,7 +224,7 @@ export default function NotificationsScreen() {
       <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.container}>
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity onPress={safeGoBack} style={styles.backButton}>
             <Feather name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>
