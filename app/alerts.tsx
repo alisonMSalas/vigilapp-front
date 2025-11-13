@@ -1,5 +1,6 @@
 import BottomNavbar, { BottomTabKey } from "@/components/BottomNavbar";
 import TopHeader from "@/components/TopHeader";
+import AlertCard from "@/components/AlertCard";
 import { ThemedText } from "@/components/themed-text";
 import {
   AlertCategory,
@@ -32,21 +33,6 @@ interface AlertData {
   isNew?: boolean;
   icon: keyof typeof Feather.glyphMap;
 }
-
-const getAlertTypeColor = (type: AlertData["type"]) => {
-  switch (type) {
-    case "emergency":
-      return "#f44336"; // Rojo
-    case "warning":
-      return "#ffc107"; // Amarillo
-    case "info":
-      return "#2196f3"; // Azul
-    case "community":
-      return "#4caf50"; // Verde
-    default:
-      return "#666";
-  }
-};
 
 export default function AlertsScreen() {
   const [active, setActive] = useState<BottomTabKey>("alerts");
@@ -363,93 +349,14 @@ export default function AlertsScreen() {
                 </ThemedText>
               </View>
             ) : (
-              filteredAlerts.map((alert) => {
-                const alertColor = getAlertTypeColor(alert.type);
-                return (
-                  <TouchableOpacity
-                    key={alert.id}
-                    style={styles.alertCard}
-                    onPress={() => handleAlertPress(alert)}
-                  >
-                    <View style={styles.alertContent}>
-                      <View style={styles.alertIconContainer}>
-                        <View
-                          style={[
-                            styles.alertIcon,
-                            { backgroundColor: alertColor },
-                          ]}
-                        >
-                          <Feather name={alert.icon} size={20} color="#000" />
-                        </View>
-                      </View>
-                      <View style={styles.alertTextContent}>
-                        <View style={styles.alertHeader}>
-                          <ThemedText style={styles.alertTitle}>
-                            {alert.title}
-                          </ThemedText>
-                          {alert.isNew && (
-                            <View style={styles.newBadge}>
-                              <ThemedText style={styles.newBadgeText}>
-                                NUEVA
-                              </ThemedText>
-                            </View>
-                          )}
-                        </View>
-                        <ThemedText style={styles.alertDescription}>
-                          {alert.description}
-                        </ThemedText>
-                        <View style={styles.alertMeta}>
-                          <View style={styles.alertMetaItem}>
-                            <Feather name="map-pin" size={12} color="#666" />
-                            <ThemedText style={styles.alertMetaText}>
-                              {alert.distance}
-                            </ThemedText>
-                          </View>
-                          <View style={styles.alertMetaItem}>
-                            <Feather name="clock" size={12} color="#666" />
-                            <ThemedText style={styles.alertMetaText}>
-                              {alert.time}
-                            </ThemedText>
-                          </View>
-                          <View style={styles.alertMetaItem}>
-                            <Feather name="file-text" size={12} color="#666" />
-                            <ThemedText style={styles.alertMetaText}>
-                              {alert.reports}
-                            </ThemedText>
-                          </View>
-                          <View style={styles.alertMetaItem}>
-                            <Feather name="map-pin" size={12} color="#666" />
-                            <ThemedText style={styles.alertMetaText}>
-                              {alert.city}
-                            </ThemedText>
-                          </View>
-                          <View
-                            style={[
-                              styles.alertMetaItem,
-                              alert.status === "Activa" && styles.activeStatus,
-                            ]}
-                          >
-                            <View
-                              style={[
-                                styles.statusDot,
-                                alert.status === "Activa" && styles.activeDot,
-                              ]}
-                            />
-                            <ThemedText
-                              style={[
-                                styles.alertMetaText,
-                                alert.status === "Activa" && styles.activeText,
-                              ]}
-                            >
-                              {alert.status}
-                            </ThemedText>
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
+              filteredAlerts.map((alert) => (
+                <AlertCard
+                  key={alert.id}
+                  alert={alert}
+                  onPress={handleAlertPress}
+                  showDetailedMeta={true}
+                />
+              ))
             )}
           </View>
         </ScrollView>
@@ -613,97 +520,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 40,
     gap: 12,
-  },
-  alertCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  alertContent: {
-    flexDirection: "row",
-    padding: 16,
-    gap: 12,
-  },
-  alertIconContainer: {
-    alignItems: "center",
-    justifyContent: "flex-start",
-  },
-  alertIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  alertTextContent: {
-    flex: 1,
-    gap: 4,
-  },
-  alertHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-  },
-  alertTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#333",
-  },
-  newBadge: {
-    backgroundColor: "#005677",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  newBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  alertDescription: {
-    fontSize: 14,
-    color: "#666",
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  alertMeta: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginTop: 4,
-  },
-  alertMetaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  alertMetaText: {
-    fontSize: 12,
-    color: "#666",
-  },
-  activeStatus: {
-    gap: 6,
-  },
-  activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#4caf50",
-  },
-  activeText: {
-    color: "#4caf50",
-    fontWeight: "600",
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#ccc",
   },
 });

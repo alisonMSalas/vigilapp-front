@@ -97,7 +97,7 @@ export default function BottomNavbar({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 12,
-    paddingBottom: 8,
+    paddingBottom: 12,
     paddingTop: 4,
   },
   bar: {

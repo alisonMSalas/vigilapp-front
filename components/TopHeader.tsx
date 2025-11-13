@@ -57,7 +57,7 @@ export default function TopHeader({
           {logo ? (
             <Image source={logo} style={styles.logo} resizeMode="contain" />
           ) : (
-            <Text style={[styles.brand, { color: '#005677' }]}>VigilApp</Text>
+            <Text style={[styles.brand, { color: '#047eaeff' }]}>VigilApp</Text>
           )}
         </View>
 

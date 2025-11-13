@@ -1,6 +1,7 @@
+import AlertCard from "@/components/AlertCard";
 import BottomNavbar, { BottomTabKey } from "@/components/BottomNavbar";
-import TopHeader from "@/components/TopHeader";
 import { ThemedText } from "@/components/themed-text";
+import TopHeader from "@/components/TopHeader";
 import {
   AlertCategory,
   alertService,
@@ -348,21 +349,6 @@ export default function HomeScreen() {
     router.push("/notifications");
   };
 
-  const getAlertIconColor = (type: AlertData["type"]) => {
-    switch (type) {
-      case "emergency":
-        return "#f44336";
-      case "warning":
-        return "#ffc107";
-      case "community":
-        return "#4caf50";
-      case "info":
-        return "#2196f3";
-      default:
-        return "#757575";
-    }
-  };
-
   return (
     <View style={styles.outerContainer}>
       <SafeAreaView style={styles.safe} edges={['left', 'right']}>
@@ -462,14 +448,6 @@ export default function HomeScreen() {
                 <ThemedText style={styles.statLabel}>Confiabilidad</ThemedText>
               </View>
             </View>
-
-            {/* Security Status Bar */}
-            <View style={styles.securityBar}>
-              <Feather name="check-circle" size={20} color="#4caf50" />
-              <ThemedText style={styles.securityText}>
-                Tu zona está segura
-              </ThemedText>
-            </View>
           </View>
 
           {/* Recent Alerts Section */}
@@ -508,54 +486,12 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 </View>
               )}
-              {alerts.map((alert) => (
-                <TouchableOpacity
+              {alerts.slice(0, 5).map((alert) => (
+                <AlertCard
                   key={alert.id}
-                  style={styles.alertCard}
-                  onPress={() => handleAlertPress(alert)}
-                >
-                  <View style={styles.alertIconContainer}>
-                    <View
-                      style={[
-                        styles.alertIcon,
-                        { backgroundColor: getAlertIconColor(alert.type) },
-                      ]}
-                    >
-                      <Feather name={alert.icon} size={20} color="#000" />
-                    </View>
-                  </View>
-                  <View style={styles.alertContent}>
-                    <View style={styles.alertHeader}>
-                      <ThemedText style={styles.alertTitle}>
-                        {alert.title}
-                      </ThemedText>
-                      {alert.isNew && (
-                        <View style={styles.newBadge}>
-                          <ThemedText style={styles.newBadgeText}>
-                            NUEVA
-                          </ThemedText>
-                        </View>
-                      )}
-                    </View>
-                    <ThemedText style={styles.alertDescription}>
-                      {alert.description}
-                    </ThemedText>
-                    <View style={styles.alertMeta}>
-                      <View style={styles.alertMetaItem}>
-                        <Feather name="map-pin" size={12} color="#666" />
-                        <ThemedText style={styles.alertMetaText}>
-                          {alert.distance}
-                        </ThemedText>
-                      </View>
-                      <View style={styles.alertMetaItem}>
-                        <Feather name="clock" size={12} color="#666" />
-                        <ThemedText style={styles.alertMetaText}>
-                          {alert.time}
-                        </ThemedText>
-                      </View>
-                    </View>
-                  </View>
-                </TouchableOpacity>
+                  alert={alert}
+                  onPress={handleAlertPress}
+                />
               ))}
             </View>
           </View>
@@ -674,7 +610,7 @@ const styles = StyleSheet.create({
   whiteSection: {
     paddingHorizontal: 20,
     paddingTop: 24,
-    paddingBottom: 40,
+    paddingBottom: 17,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -746,8 +682,7 @@ const styles = StyleSheet.create({
   },
   alertsSection: {
     backgroundColor: "#fff",
-    paddingTop: 24,
-    paddingBottom: 24,
+    paddingBottom: 12,
   },
   alertsHeader: {
     backgroundColor: "#005677",
@@ -776,75 +711,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     gap: 12,
-  },
-  alertCard: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  alertIconContainer: {
-    alignItems: "center",
-    justifyContent: "flex-start",
-  },
-  alertIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  alertContent: {
-    flex: 1,
-    gap: 4,
-  },
-  alertHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-  },
-  alertTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#333",
-  },
-  newBadge: {
-    backgroundColor: "#005677",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  newBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  alertDescription: {
-    fontSize: 14,
-    color: "#666",
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  alertMeta: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  alertMetaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  alertMetaText: {
-    fontSize: 12,
-    color: "#666",
   },
   tipsSection: {
     paddingHorizontal: 20,
