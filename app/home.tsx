@@ -364,25 +364,26 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <StatusBar style="light" />
-      <View style={styles.container}>
-        <TopHeader
-          notificationsCount={newAlertsCount}
-          onLogout={handleLogout}
-          onPressNotifications={handleNotificationsPress}
-        />
+    <View style={styles.outerContainer}>
+      <SafeAreaView style={styles.safe} edges={['left', 'right']}>
+        <StatusBar style="light" />
+        <View style={styles.container}>
+          <TopHeader
+            notificationsCount={newAlertsCount}
+            onLogout={handleLogout}
+            onPressNotifications={handleNotificationsPress}
+          />
 
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#005677" />
-            <ThemedText style={styles.loadingText}>
-              Cargando alertas...
-            </ThemedText>
-          </View>
-        )}
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#005677" />
+              <ThemedText style={styles.loadingText}>
+                Cargando alertas...
+              </ThemedText>
+            </View>
+          )}
 
-        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
           {/* Blue Header Section */}
           <View style={styles.blueSection}>
             <ThemedText style={styles.greeting}>¡Hola, {userName}!</ThemedText>
@@ -510,10 +511,9 @@ export default function HomeScreen() {
               {alerts.map((alert) => (
                 <TouchableOpacity
                   key={alert.id}
-                  style={[styles.alertCard, { borderLeftColor: getAlertIconColor(alert.type) }]}
+                  style={styles.alertCard}
                   onPress={() => handleAlertPress(alert)}
                 >
-                  <View style={[styles.alertLeftBorder, { backgroundColor: getAlertIconColor(alert.type) }]} />
                   <View style={styles.alertIconContainer}>
                     <View
                       style={[
@@ -590,17 +590,21 @@ export default function HomeScreen() {
             ))}
           </View>
         </ScrollView>
-
-        <BottomNavbar active={active} onTabPress={handleTabPress} />
-      </View>
-    </SafeAreaView>
+        </View>
+      </SafeAreaView>
+      <BottomNavbar active={active} onTabPress={handleTabPress} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: "#fafafa",
+  },
   safe: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#fafafa",
   },
   container: {
     flex: 1,
@@ -777,7 +781,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#fff",
     borderRadius: 12,
-    borderLeftWidth: 4,
     padding: 16,
     gap: 12,
     shadowColor: "#000",
@@ -785,14 +788,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-    overflow: "hidden",
-  },
-  alertLeftBorder: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
   },
   alertIconContainer: {
     alignItems: "center",

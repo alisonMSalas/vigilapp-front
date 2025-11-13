@@ -234,14 +234,15 @@ export default function AlertsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={["bottom"]}>
-      <StatusBar style="light" />
-      <View style={styles.container}>
-        <TopHeader
-          notificationsCount={0}
-          onLogout={handleLogout}
-          onPressNotifications={handleNotificationsPress}
-        />
+    <View style={styles.outerContainer}>
+      <SafeAreaView style={styles.safe} edges={["left", "right"]}>
+        <StatusBar style="light" />
+        <View style={styles.container}>
+          <TopHeader
+            notificationsCount={0}
+            onLogout={handleLogout}
+            onPressNotifications={handleNotificationsPress}
+          />
 
         {loading && (
           <View style={styles.loadingContainer}>
@@ -367,15 +368,9 @@ export default function AlertsScreen() {
                 return (
                   <TouchableOpacity
                     key={alert.id}
-                    style={[styles.alertCard, { borderLeftColor: alertColor }]}
+                    style={styles.alertCard}
                     onPress={() => handleAlertPress(alert)}
                   >
-                    <View
-                      style={[
-                        styles.alertLeftBorder,
-                        { backgroundColor: alertColor },
-                      ]}
-                    />
                     <View style={styles.alertContent}>
                       <View style={styles.alertIconContainer}>
                         <View
@@ -458,17 +453,21 @@ export default function AlertsScreen() {
             )}
           </View>
         </ScrollView>
-
-        <BottomNavbar active={active} onTabPress={handleTabPress} />
-      </View>
-    </SafeAreaView>
+        </View>
+      </SafeAreaView>
+      <BottomNavbar active={active} onTabPress={handleTabPress} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: "#fafafa",
+  },
   safe: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#fafafa",
   },
   container: {
     flex: 1,
@@ -618,20 +617,11 @@ const styles = StyleSheet.create({
   alertCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
-    borderLeftWidth: 4,
-    overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-  },
-  alertLeftBorder: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
   },
   alertContent: {
     flexDirection: "row",

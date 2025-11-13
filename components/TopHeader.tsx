@@ -52,7 +52,7 @@ export default function TopHeader({
           activeOpacity={1}
         />
       )}
-      <View style={[styles.wrapper, { backgroundColor: palette.background, paddingTop: insets.top + 8 }, style]}>
+      <View style={[styles.wrapper, { backgroundColor: palette.background, paddingTop: insets.top }, style]}>
         <View style={styles.left}>
           {logo ? (
             <Image source={logo} style={styles.logo} resizeMode="contain" />
