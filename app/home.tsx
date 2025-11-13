@@ -1,6 +1,7 @@
+import AlertCard from "@/components/AlertCard";
 import BottomNavbar, { BottomTabKey } from "@/components/BottomNavbar";
-import TopHeader from "@/components/TopHeader";
 import { ThemedText } from "@/components/themed-text";
+import TopHeader from "@/components/TopHeader";
 import {
   AlertCategory,
   alertService,
@@ -8,19 +9,22 @@ import {
 } from "@/services/alert.service";
 import { locationService } from "@/services/location.service";
 import { notificationService } from "@/services/notification.service";
-import { calculateDistance, formatDistance } from "@/services/utils/geolocation.utils";
 import { userZoneService } from "@/services/user-zone.service";
+import {
+  calculateDistance,
+  formatDistance,
+} from "@/services/utils/geolocation.utils";
 import {
   AlertNotification,
   webSocketService,
 } from "@/services/websocket.service";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -46,12 +50,6 @@ const securityTips = [
     description:
       "Mantén siempre a mano los números 911, 101 (Policía) y 102 (Bomberos)",
   },
-  {
-    icon: "map-pin",
-    title: "Comparte tu Ubicación",
-    description:
-      "Activa la ubicación en tiempo real para recibir alertas más precisas",
-  },
 ];
 
 export default function HomeScreen() {
@@ -74,7 +72,7 @@ export default function HomeScreen() {
     const requestNotificationPermissions = async () => {
       const hasPermissions = await notificationService.hasPermissions();
       if (!hasPermissions) {
-        console.log('[Home] 📢 Solicitando permisos de notificación...');
+        console.log("[Home] 📢 Solicitando permisos de notificación...");
         await notificationService.requestPermissions();
       }
     };
@@ -132,7 +130,9 @@ export default function HomeScreen() {
 
         // Sort by createdAt descending (newest first)
         const sortedAlerts = [...myZoneAlerts].sort((a, b) => {
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
         });
 
         // Mapear alertas del backend al formato del frontend
@@ -203,12 +203,14 @@ export default function HomeScreen() {
 
   const handleNewAlert = async (notification: AlertNotification) => {
     try {
-      console.log('[Home] 🔔 Nueva alerta recibida:', notification.alertTitle);
+      console.log("[Home] 🔔 Nueva alerta recibida:", notification.alertTitle);
 
       // 1. Obtener ubicación actual del usuario
       const userLocation = await locationService.getCurrentLocation();
       if (!userLocation) {
-        console.log('[Home] ⚠️ No se pudo obtener ubicación del usuario, mostrando alerta sin filtrar');
+        console.log(
+          "[Home] ⚠️ No se pudo obtener ubicación del usuario, mostrando alerta sin filtrar"
+        );
         // Si no hay ubicación, mostrar la alerta de todas formas
         showAlertNotification(notification, "Distancia desconocida");
         return;
@@ -217,7 +219,9 @@ export default function HomeScreen() {
       // 2. Obtener radio configurado del usuario
       const userZone = await userZoneService.getUserZone();
       if (!userZone) {
-        console.log('[Home] ⚠️ Usuario sin zona configurada, mostrando alerta sin filtrar');
+        console.log(
+          "[Home] ⚠️ Usuario sin zona configurada, mostrando alerta sin filtrar"
+        );
         // Si no hay zona configurada, mostrar la alerta
         showAlertNotification(notification, "Distancia desconocida");
         return;
@@ -231,19 +235,28 @@ export default function HomeScreen() {
         notification.longitude
       );
 
-      console.log('[Home] 📏 Distancia calculada:', formatDistance(distance));
-      console.log('[Home] 📍 Radio configurado:', formatDistance(userZone.radiusM));
+      console.log("[Home] 📏 Distancia calculada:", formatDistance(distance));
+      console.log(
+        "[Home] 📍 Radio configurado:",
+        formatDistance(userZone.radiusM)
+      );
 
       // 4. Verificar si está dentro del rango
       if (distance <= userZone.radiusM) {
-        console.log('[Home] ✅ Alerta dentro del rango, mostrando notificación');
+        console.log(
+          "[Home] ✅ Alerta dentro del rango, mostrando notificación"
+        );
         showAlertNotification(notification, formatDistance(distance));
       } else {
-        console.log('[Home] ❌ Alerta fuera del rango, ignorando');
-        console.log(`  Distancia: ${formatDistance(distance)} > Radio: ${formatDistance(userZone.radiusM)}`);
+        console.log("[Home] ❌ Alerta fuera del rango, ignorando");
+        console.log(
+          `  Distancia: ${formatDistance(distance)} > Radio: ${formatDistance(
+            userZone.radiusM
+          )}`
+        );
       }
     } catch (error) {
-      console.error('[Home] ❌ Error procesando nueva alerta:', error);
+      console.error("[Home] ❌ Error procesando nueva alerta:", error);
       // En caso de error, mostrar la alerta para no perder información importante
       showAlertNotification(notification, "Error calculando distancia");
     }
@@ -252,7 +265,10 @@ export default function HomeScreen() {
   /**
    * Mostrar notificación y agregar alerta a la lista
    */
-  const showAlertNotification = (notification: AlertNotification, distance: string) => {
+  const showAlertNotification = (
+    notification: AlertNotification,
+    distance: string
+  ) => {
     // Mostrar notificación nativa
     notificationService.showAlertNotification(
       notification.alertTitle,
@@ -277,7 +293,7 @@ export default function HomeScreen() {
     setNewAlertsCount((prev) => prev + 1);
     setActiveAlertsCount((prev) => prev + 1);
 
-    console.log('[Home] ✅ Alerta agregada a la lista');
+    console.log("[Home] ✅ Alerta agregada a la lista");
   };
 
   const mapCategoryToType = (category: AlertCategory): AlertData["type"] => {
@@ -328,6 +344,10 @@ export default function HomeScreen() {
     router.push("/map");
   };
 
+  const handleViewReports = () => {
+    router.push("/reports");
+  };
+
   const handleConfigure = () => {
     router.push("/settings");
   };
@@ -354,261 +374,219 @@ export default function HomeScreen() {
     router.push("/notifications");
   };
 
-  const getAlertIconColor = (type: AlertData["type"]) => {
-    switch (type) {
-      case "emergency":
-        return "#f44336";
-      case "warning":
-        return "#ffc107";
-      case "community":
-        return "#4caf50";
-      case "info":
-        return "#2196f3";
-      default:
-        return "#757575";
-    }
-  };
-
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <View style={styles.container}>
-        <TopHeader
-          notificationsCount={newAlertsCount}
-          onLogout={handleLogout}
-          onPressNotifications={handleNotificationsPress}
-        />
+    <View style={styles.outerContainer}>
+      <SafeAreaView style={styles.safe} edges={["left", "right"]}>
+        <StatusBar style="light" />
+        <View style={styles.container}>
+          <TopHeader
+            notificationsCount={newAlertsCount}
+            onLogout={handleLogout}
+            onPressNotifications={handleNotificationsPress}
+          />
 
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#005677" />
-            <ThemedText style={styles.loadingText}>
-              Cargando alertas...
-            </ThemedText>
-          </View>
-        )}
-
-        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-          {/* Blue Header Section */}
-          <View style={styles.blueSection}>
-            <ThemedText style={styles.greeting}>¡Hola, {userName}!</ThemedText>
-            <ThemedText style={styles.subtitle}>
-              Mantente informada sobre la seguridad en tu zona
-            </ThemedText>
-
-            <View style={styles.buttonGroup}>
-              <TouchableOpacity
-                style={styles.reportButton}
-                onPress={handleReportIncident}
-                activeOpacity={0.9}
-              >
-                <ThemedText style={styles.reportButtonText}>
-                  Reportar Incidencia
-                </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.mapButton}
-                onPress={handleViewMap}
-                activeOpacity={0.9}
-              >
-                <ThemedText style={styles.mapButtonText}>Ver Mapa</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* White Content Section */}
-          <View style={styles.whiteSection}>
-            {/* Section Header */}
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitle}>
-                <Feather name="map-pin" size={18} color="#333" />
-                <ThemedText style={styles.sectionTitleText}>
-                  Estado de Mi Zona
-                </ThemedText>
-              </View>
-              <TouchableOpacity
-                style={styles.configButton}
-                onPress={handleConfigure}
-              >
-                <ThemedText style={styles.configButtonText}>
-                  Configurar
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-
-            {/* Stats Grid */}
-            <View style={styles.statsGrid}>
-              <View style={styles.statCard}>
-                <ThemedText style={styles.statValue}>
-                  {radiusKm ? `${radiusKm.toFixed(1)} km` : "--"}
-                </ThemedText>
-                <ThemedText style={styles.statLabel}>Radio</ThemedText>
-              </View>
-
-              <View style={styles.statCard}>
-                <ThemedText style={styles.statValue}>
-                  {activeAlertsCount}
-                </ThemedText>
-                <ThemedText style={styles.statLabel}>
-                  Alertas Activas
-                </ThemedText>
-              </View>
-
-              <View style={styles.statCard}>
-                <ThemedText style={styles.statValue}>--</ThemedText>
-                <ThemedText style={styles.statLabel}>
-                  Vecinos Activos
-                </ThemedText>
-              </View>
-
-              <View style={styles.statCard}>
-                <ThemedText style={styles.statValue}>--</ThemedText>
-                <ThemedText style={styles.statLabel}>Confiabilidad</ThemedText>
-              </View>
-            </View>
-
-            {/* Security Status Bar */}
-            <View style={styles.securityBar}>
-              <Feather name="check-circle" size={20} color="#4caf50" />
-              <ThemedText style={styles.securityText}>
-                Tu zona está segura
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#005677" />
+              <ThemedText style={styles.loadingText}>
+                Cargando alertas...
               </ThemedText>
             </View>
-          </View>
+          )}
 
-          {/* Recent Alerts Section */}
-          <View style={styles.alertsSection}>
-            <View style={styles.alertsHeader}>
-              <View style={styles.alertsTitle}>
-                <Feather name="alert-triangle" size={20} color="#fff" />
-                <ThemedText style={styles.alertsTitleText}>
-                  Alertas Recientes
-                </ThemedText>
+          <ScrollView
+            style={styles.scroll}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Blue Header Section */}
+            <View style={styles.blueSection}>
+              <ThemedText style={styles.greeting}>
+                ¡Hola, {userName}!
+              </ThemedText>
+              <ThemedText style={styles.subtitle}>
+                Mantente informada sobre la seguridad en tu zona
+              </ThemedText>
+
+              <View style={styles.buttonGroup}>
+                <TouchableOpacity
+                  style={styles.reportButton}
+                  onPress={handleReportIncident}
+                  activeOpacity={0.9}
+                >
+                  <ThemedText style={styles.reportButtonText}>
+                    Reportar Incidencia
+                  </ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.mapButton}
+                  onPress={handleViewMap}
+                  activeOpacity={0.9}
+                >
+                  <ThemedText style={styles.mapButtonText}>Ver Mapa</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.statsButton}
+                  onPress={handleViewReports}
+                  activeOpacity={0.9}
+                >
+                  <Feather name="bar-chart-2" size={16} color="#005677" />
+                  <ThemedText style={styles.statsButtonText}>
+                    Reportes
+                  </ThemedText>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity>
-                <ThemedText style={styles.seeAllText}>Ver todas</ThemedText>
-              </TouchableOpacity>
             </View>
 
-            <View style={styles.alertsList}>
-              {!radiusKm && alerts.length === 0 && (
-                <View style={styles.emptyState}>
-                  <Feather name="map-pin" size={48} color="#ccc" />
-                  <ThemedText style={styles.emptyStateTitle}>
-                    Configura tu zona
+            {/* White Content Section */}
+            <View style={styles.whiteSection}>
+              {/* Section Header */}
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitle}>
+                  <Feather name="map-pin" size={18} color="#333" />
+                  <ThemedText style={styles.sectionTitleText}>
+                    Estado de Mi Zona
                   </ThemedText>
-                  <ThemedText style={styles.emptyStateText}>
-                    Para recibir alertas relevantes, primero debes configurar tu
-                    ubicación y radio de vigilancia
-                  </ThemedText>
-                  <TouchableOpacity
-                    style={styles.configureZoneButton}
-                    onPress={handleConfigure}
-                  >
-                    <Feather name="settings" size={20} color="#fff" />
-                    <ThemedText style={styles.configureZoneButtonText}>
-                      Configurar ahora
-                    </ThemedText>
-                  </TouchableOpacity>
                 </View>
-              )}
-              {alerts.map((alert) => (
                 <TouchableOpacity
-                  key={alert.id}
-                  style={styles.alertCard}
-                  onPress={() => handleAlertPress(alert)}
+                  style={styles.configButton}
+                  onPress={handleConfigure}
                 >
-                  <View style={styles.alertIconContainer}>
-                    <View
-                      style={[
-                        styles.alertIcon,
-                        { backgroundColor: getAlertIconColor(alert.type) },
-                      ]}
-                    >
-                      <Feather name={alert.icon} size={20} color="#000" />
-                    </View>
-                  </View>
-                  <View style={styles.alertContent}>
-                    <View style={styles.alertHeader}>
-                      <ThemedText style={styles.alertTitle}>
-                        {alert.title}
-                      </ThemedText>
-                      {alert.isNew && (
-                        <View style={styles.newBadge}>
-                          <ThemedText style={styles.newBadgeText}>
-                            NUEVA
-                          </ThemedText>
-                        </View>
-                      )}
-                    </View>
-                    <ThemedText style={styles.alertDescription}>
-                      {alert.description}
+                  <ThemedText style={styles.configButtonText}>
+                    Configurar
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              {/* Stats Grid */}
+              <View style={styles.statsGrid}>
+                <View style={styles.statCard}>
+                  <ThemedText style={styles.statValue}>
+                    {radiusKm ? `${radiusKm.toFixed(1)} km` : "--"}
+                  </ThemedText>
+                  <ThemedText style={styles.statLabel}>Radio</ThemedText>
+                </View>
+
+                <View style={styles.statCard}>
+                  <ThemedText style={styles.statValue}>
+                    {activeAlertsCount}
+                  </ThemedText>
+                  <ThemedText style={styles.statLabel}>
+                    Alertas Activas
+                  </ThemedText>
+                </View>
+
+                <View style={styles.statCard}>
+                  <ThemedText style={styles.statValue}>--</ThemedText>
+                  <ThemedText style={styles.statLabel}>
+                    Vecinos Activos
+                  </ThemedText>
+                </View>
+
+                <View style={styles.statCard}>
+                  <ThemedText style={styles.statValue}>--</ThemedText>
+                  <ThemedText style={styles.statLabel}>
+                    Confiabilidad
+                  </ThemedText>
+                </View>
+              </View>
+            </View>
+
+            {/* Recent Alerts Section */}
+            <View style={styles.alertsSection}>
+              <View style={styles.alertsHeader}>
+                <View style={styles.alertsTitle}>
+                  <Feather name="alert-triangle" size={20} color="#fff" />
+                  <ThemedText style={styles.alertsTitleText}>
+                    Alertas Recientes
+                  </ThemedText>
+                </View>
+                <TouchableOpacity>
+                  <ThemedText style={styles.seeAllText}>Ver todas</ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.alertsList}>
+                {!radiusKm && alerts.length === 0 && (
+                  <View style={styles.emptyState}>
+                    <Feather name="map-pin" size={48} color="#ccc" />
+                    <ThemedText style={styles.emptyStateTitle}>
+                      Configura tu zona
                     </ThemedText>
-                    <View style={styles.alertMeta}>
-                      <View style={styles.alertMetaItem}>
-                        <Feather name="map-pin" size={12} color="#666" />
-                        <ThemedText style={styles.alertMetaText}>
-                          {alert.distance}
-                        </ThemedText>
-                      </View>
-                      <View style={styles.alertMetaItem}>
-                        <Feather name="clock" size={12} color="#666" />
-                        <ThemedText style={styles.alertMetaText}>
-                          {alert.time}
-                        </ThemedText>
-                      </View>
-                    </View>
+                    <ThemedText style={styles.emptyStateText}>
+                      Para recibir alertas relevantes, primero debes configurar
+                      tu ubicación y radio de vigilancia
+                    </ThemedText>
+                    <TouchableOpacity
+                      style={styles.configureZoneButton}
+                      onPress={handleConfigure}
+                    >
+                      <Feather name="settings" size={20} color="#fff" />
+                      <ThemedText style={styles.configureZoneButtonText}>
+                        Configurar ahora
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {alerts.slice(0, 5).map((alert) => (
+                  <AlertCard
+                    key={alert.id}
+                    alert={alert}
+                    onPress={handleAlertPress}
+                  />
+                ))}
+              </View>
+            </View>
+
+            {/* Security Tips Section */}
+            <View style={styles.tipsSection}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitle}>
+                  <Feather name="shield" size={18} color="#005677" />
+                  <ThemedText style={styles.sectionTitleText}>
+                    Consejos de Seguridad
+                  </ThemedText>
+                </View>
+              </View>
+
+              {securityTips.map((tip, index) => (
+                <TouchableOpacity key={index} style={styles.tipCard}>
+                  <View style={styles.tipIcon}>
+                    <Feather
+                      name={tip.icon as keyof typeof Feather.glyphMap}
+                      size={20}
+                      color="#fff"
+                    />
+                  </View>
+                  <View style={styles.tipContent}>
+                    <ThemedText style={styles.tipTitle}>{tip.title}</ThemedText>
+                    <ThemedText style={styles.tipDescription}>
+                      {tip.description}
+                    </ThemedText>
                   </View>
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
-
-          {/* Security Tips Section */}
-          <View style={styles.tipsSection}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitle}>
-                <Feather name="shield" size={18} color="#005677" />
-                <ThemedText style={styles.sectionTitleText}>
-                  Consejos de Seguridad
-                </ThemedText>
-              </View>
-            </View>
-
-            {securityTips.map((tip, index) => (
-              <TouchableOpacity key={index} style={styles.tipCard}>
-                <View style={styles.tipIcon}>
-                  <Feather
-                    name={tip.icon as keyof typeof Feather.glyphMap}
-                    size={20}
-                    color="#fff"
-                  />
-                </View>
-                <View style={styles.tipContent}>
-                  <ThemedText style={styles.tipTitle}>{tip.title}</ThemedText>
-                  <ThemedText style={styles.tipDescription}>
-                    {tip.description}
-                  </ThemedText>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
-
-        <BottomNavbar active={active} onTabPress={handleTabPress} />
-      </View>
-    </SafeAreaView>
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+      <BottomNavbar active={active} onTabPress={handleTabPress} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+    backgroundColor: "#fafafa",
+  },
   safe: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#fafafa",
   },
   container: {
     flex: 1,
-    justifyContent: "space-between",
   },
   scroll: {
     flex: 1,
@@ -672,10 +650,25 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#fff",
   },
+  statsButton: {
+    backgroundColor: "#fff",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  statsButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#005677",
+  },
   whiteSection: {
     paddingHorizontal: 20,
     paddingTop: 24,
-    paddingBottom: 40,
+    paddingBottom: 17,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -747,8 +740,7 @@ const styles = StyleSheet.create({
   },
   alertsSection: {
     backgroundColor: "#fff",
-    paddingTop: 24,
-    paddingBottom: 24,
+    paddingBottom: 12,
   },
   alertsHeader: {
     backgroundColor: "#005677",
@@ -777,75 +769,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     gap: 12,
-  },
-  alertCard: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  alertIconContainer: {
-    alignItems: "center",
-    justifyContent: "flex-start",
-  },
-  alertIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  alertContent: {
-    flex: 1,
-    gap: 4,
-  },
-  alertHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-  },
-  alertTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#333",
-  },
-  newBadge: {
-    backgroundColor: "#005677",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  newBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  alertDescription: {
-    fontSize: 14,
-    color: "#666",
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  alertMeta: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  alertMetaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  alertMetaText: {
-    fontSize: 12,
-    color: "#666",
   },
   tipsSection: {
     paddingHorizontal: 20,

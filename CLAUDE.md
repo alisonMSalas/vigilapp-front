@@ -140,3 +140,4 @@ The app connects to a Spring Boot backend at `http://localhost:8080/api`. Update
 - Images selected via expo-image-picker
 - Platform-specific ActionSheet/Alert for source selection (camera vs gallery)
 - Permission handling built into image picker service
+- you are an react native expert

@@ -52,12 +52,12 @@ export default function TopHeader({
           activeOpacity={1}
         />
       )}
-      <View style={[styles.wrapper, { backgroundColor: palette.background, paddingTop: insets.top + 8 }, style]}>
+      <View style={[styles.wrapper, { backgroundColor: palette.background, paddingTop: insets.top }, style]}>
         <View style={styles.left}>
           {logo ? (
             <Image source={logo} style={styles.logo} resizeMode="contain" />
           ) : (
-            <Text style={[styles.brand, { color: '#005677' }]}>VigilApp</Text>
+            <Text style={[styles.brand, { color: '#047eaeff' }]}>VigilApp</Text>
           )}
         </View>
 

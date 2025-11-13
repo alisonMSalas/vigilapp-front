@@ -107,12 +107,43 @@ class NotificationService {
       }
 
       const data = await response.json();
-      return data.content || data; // Handle Spring pagination
+      const notifications = data.content || data;
+
+      // Map backend response to frontend Notification type
+      return notifications.map((n: any) => ({
+        id: n.id,
+        userId: n.userId,
+        type: this.mapCategoryToType(n.alertCategory),
+        title: n.alertTitle || 'Sin título',
+        message: n.alertDescription || 'Sin descripción',
+        data: {
+          alertId: n.alertId,
+          alertCategory: n.alertCategory,
+          channel: n.channel,
+          status: n.status,
+        },
+        isRead: n.isRead || false,
+        createdAt: n.createdAt,
+        readAt: n.readAt,
+      }));
     } catch (error) {
       console.error('[NotificationService] Error getting notifications:', error);
       // Return empty array instead of throwing to allow UI to work
       return [];
     }
+  }
+
+  /**
+   * Map alert category to notification type
+   */
+  private mapCategoryToType(category: string): string {
+    const typeMap: { [key: string]: string } = {
+      'EMERGENCY': 'ALERT_NEARBY',
+      'PRECAUTION': 'ALERT_NEARBY',
+      'INFO': 'ALERT_UPDATE',
+      'COMMUNITY': 'ALERT_UPDATE',
+    };
+    return typeMap[category] || 'ALERT_NEARBY';
   }
 
   /**
