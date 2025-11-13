@@ -7,6 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { StatusBar } from 'expo-status-bar';
 import {
     ActivityIndicator,
     Alert,
@@ -362,6 +363,7 @@ export default function LocationScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <StatusBar style="dark" />
       <View style={styles.container}>
         <View style={styles.header}>
             {returnTo === 'create-alert' ? (

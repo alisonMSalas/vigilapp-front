@@ -13,15 +13,17 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Funci�n helper para navegar hacia atr�s de forma segura
+  // Función helper para navegar hacia atrás de forma segura
   const safeGoBack = () => {
     if (router.canGoBack()) {
       router.back();
@@ -36,7 +38,7 @@ export default function NotificationsScreen() {
 
   const loadNotifications = async () => {
     try {
-      console.log('[Notifications] =� Cargando notificaciones...');
+      console.log('[Notifications] => Cargando notificaciones...');
       const data = await notificationService.getNotifications();
       console.log('[Notifications]  Notificaciones cargadas:', data.length);
       setNotifications(data);
@@ -86,17 +88,17 @@ export default function NotificationsScreen() {
       setNotifications((prev) =>
         prev.map((n) => ({ ...n, isRead: true }))
       );
-      Alert.alert('�xito', 'Todas las notificaciones han sido marcadas como le�das');
+      Alert.alert('Éxito', 'Todas las notificaciones han sido marcadas como leídas');
     } catch (error) {
       console.error('[Notifications] Error marking all as read:', error);
-      Alert.alert('Error', 'No se pudieron marcar las notificaciones como le�das');
+      Alert.alert('Error', 'No se pudieron marcar las notificaciones como leídas');
     }
   };
 
   const handleDeleteNotification = async (notificationId: string) => {
     Alert.alert(
-      'Eliminar notificaci�n',
-      '�Est�s seguro de que deseas eliminar esta notificaci�n?',
+      'Eliminar notificación',
+      '¿Estás seguro de que deseas eliminar esta notificación?',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -108,7 +110,7 @@ export default function NotificationsScreen() {
               setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
             } catch (error) {
               console.error('[Notifications] Error deleting notification:', error);
-              Alert.alert('Error', 'No se pudo eliminar la notificaci�n');
+              Alert.alert('Error', 'No se pudo eliminar la notificación');
             }
           },
         },
@@ -162,13 +164,22 @@ export default function NotificationsScreen() {
     if (minutes < 1) return 'Ahora';
     if (minutes < 60) return `Hace ${minutes} min`;
     if (hours < 24) return `Hace ${hours} hora${hours > 1 ? 's' : ''}`;
-    if (days < 7) return `Hace ${days} d�a${days > 1 ? 's' : ''}`;
+    if (days < 7) return `Hace ${days} día${days > 1 ? 's' : ''}`;
     return date.toLocaleDateString();
   };
 
   const renderNotification = ({ item }: { item: Notification }) => {
     const color = getNotificationColor(item.type);
     const icon = getNotificationIcon(item.type);
+
+    // Debug logging
+    console.log('[NotificationItem]', {
+      id: item.id,
+      title: item.title,
+      message: item.message,
+      hasTitle: !!item.title,
+      hasMessage: !!item.message,
+    });
 
     return (
       <TouchableOpacity
@@ -182,10 +193,14 @@ export default function NotificationsScreen() {
 
         <View style={styles.notificationContent}>
           <View style={styles.notificationHeader}>
-            <ThemedText style={styles.notificationTitle}>{item.title}</ThemedText>
+            <ThemedText style={styles.notificationTitle}>
+              {item.title || 'Sin título'}
+            </ThemedText>
             {!item.isRead && <View style={styles.unreadDot} />}
           </View>
-          <ThemedText style={styles.notificationMessage}>{item.message}</ThemedText>
+          <ThemedText style={styles.notificationMessage}>
+            {item.message || 'Sin descripción'}
+          </ThemedText>
           <ThemedText style={styles.notificationTime}>{getRelativeTime(item.createdAt)}</ThemedText>
         </View>
 
@@ -213,10 +228,12 @@ export default function NotificationsScreen() {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <>
+      <StatusBar style="dark" />
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <TouchableOpacity onPress={safeGoBack} style={styles.backButton}>
             <Feather name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>
@@ -266,6 +283,7 @@ export default function NotificationsScreen() {
         )}
       </View>
     </SafeAreaView>
+    </>
   );
 }
 

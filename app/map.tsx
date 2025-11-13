@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 
 interface MapRegion {
   latitude: number;
@@ -131,6 +132,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="dark" />
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity

@@ -1,7 +1,8 @@
 import { ThemedText } from '@/components/themed-text';
-import { alertService, Alert as AlertType, AlertCategory, AlertStatus } from '@/services/alert.service';
+import { alertService, Alert as AlertType } from '@/services/alert.service';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -123,6 +124,7 @@ export default function AlertDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <StatusBar style="dark" />
         <View style={[styles.container, styles.loadingContainer]}>
           <ActivityIndicator size="large" color="#005677" />
           <ThemedText style={styles.loadingText}>Cargando alerta...</ThemedText>
@@ -134,6 +136,7 @@ export default function AlertDetailScreen() {
   if (!alert) {
     return (
       <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <StatusBar style="dark" />
         <View style={[styles.container, styles.loadingContainer]}>
           <Feather name="alert-circle" size={48} color="#ccc" />
           <ThemedText style={styles.loadingText}>Alerta no encontrada</ThemedText>
@@ -150,9 +153,10 @@ export default function AlertDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <StatusBar style="dark" />
       <View style={styles.container}>
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <TouchableOpacity onPress={safeGoBack} style={styles.backButton}>
             <Feather name="arrow-left" size={24} color="#333" />
           </TouchableOpacity>

@@ -8,23 +8,23 @@ import {
 } from "@/services/alert.service";
 import { locationService } from "@/services/location.service";
 import { notificationService } from "@/services/notification.service";
-import { calculateDistance, formatDistance } from "@/services/utils/geolocation.utils";
 import { userZoneService } from "@/services/user-zone.service";
+import { calculateDistance, formatDistance } from "@/services/utils/geolocation.utils";
 import {
   AlertNotification,
   webSocketService,
 } from "@/services/websocket.service";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -45,12 +45,6 @@ const securityTips = [
     title: "Números de Emergencia",
     description:
       "Mantén siempre a mano los números 911, 101 (Policía) y 102 (Bomberos)",
-  },
-  {
-    icon: "map-pin",
-    title: "Comparte tu Ubicación",
-    description:
-      "Activa la ubicación en tiempo real para recibir alertas más precisas",
   },
 ];
 
@@ -371,6 +365,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <StatusBar style="light" />
       <View style={styles.container}>
         <TopHeader
           notificationsCount={newAlertsCount}
@@ -515,9 +510,10 @@ export default function HomeScreen() {
               {alerts.map((alert) => (
                 <TouchableOpacity
                   key={alert.id}
-                  style={styles.alertCard}
+                  style={[styles.alertCard, { borderLeftColor: getAlertIconColor(alert.type) }]}
                   onPress={() => handleAlertPress(alert)}
                 >
+                  <View style={[styles.alertLeftBorder, { backgroundColor: getAlertIconColor(alert.type) }]} />
                   <View style={styles.alertIconContainer}>
                     <View
                       style={[
@@ -604,11 +600,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#f5f5f5",
   },
   container: {
     flex: 1,
-    justifyContent: "space-between",
   },
   scroll: {
     flex: 1,
@@ -782,6 +777,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#fff",
     borderRadius: 12,
+    borderLeftWidth: 4,
     padding: 16,
     gap: 12,
     shadowColor: "#000",
@@ -789,6 +785,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+    overflow: "hidden",
+  },
+  alertLeftBorder: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   alertIconContainer: {
     alignItems: "center",

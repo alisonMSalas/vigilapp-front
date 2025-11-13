@@ -1,9 +1,11 @@
 import MapWrapper, { MapMarker } from '@/components/MapWrapper';
 import { ThemedText } from '@/components/themed-text';
-import { userZoneService, SaveUserZoneDto } from '@/services/user-zone.service';
+import { SaveUserZoneDto, userZoneService } from '@/services/user-zone.service';
 import { Feather } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,7 +17,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Slider from '@react-native-community/slider';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Address {
@@ -257,6 +258,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <StatusBar style="dark" />
       <ScrollView style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <TouchableOpacity onPress={safeGoBack} style={styles.backButton}>
@@ -342,7 +344,7 @@ export default function SettingsScreen() {
         presentationStyle="fullScreen"
       >
         <SafeAreaView style={styles.modalContainer} edges={['bottom']}>
-          <View style={[styles.modalHeader, { paddingTop: insets.top + 16 }]}>
+          <View style={[styles.modalHeader, { paddingTop: insets.top }]}>
             <TouchableOpacity
               onPress={() => setShowLocationPicker(false)}
               style={styles.closeButton}
@@ -493,7 +495,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   radiusValue: {
-    fontSize: 32,
+    fontSize: 22,
     fontWeight: '700',
     color: '#005677',
   },
@@ -620,6 +622,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8f5e9',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
+    paddingBottom: 24,
   },
   selectedLocationText: {
     flex: 1,
