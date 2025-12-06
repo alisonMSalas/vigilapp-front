@@ -1,0 +1,43 @@
+# Dockerfile para ejecutar tests del frontend VigilApp
+FROM node:20-alpine
+
+# Metadata
+LABEL maintainer="VigilApp Team"
+LABEL description="Docker image for running VigilApp Frontend unit tests"
+
+# Variables de entorno
+ENV NODE_ENV=test
+ENV CI=true
+ENV EXPO_PUBLIC_API_URL=http://localhost:8080
+
+# Directorio de trabajo
+WORKDIR /app
+
+# Instalar dependencias del sistema necesarias
+RUN apk add --no-cache \
+    git \
+    python3 \
+    make \
+    g++
+
+# Copiar archivos de dependencias
+COPY package*.json ./
+
+# Instalar dependencias
+RUN npm install --legacy-peer-deps
+
+# Copiar el resto del código
+COPY . .
+
+# Verificar instalación
+RUN npm list jest || echo "Jest installed"
+
+# Comando por defecto: ejecutar tests con cobertura
+CMD ["npm", "test", "--", "--coverage", "--watchAll=false", "--maxWorkers=2"]
+
+# Healthcheck opcional
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "console.log('Container is healthy')" || exit 1
+
+# Exponer puerto para debugging (opcional)
+EXPOSE 9229

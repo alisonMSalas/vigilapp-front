@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # Servicio para ejecutar tests unitarios
+  frontend-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: vigilapp-frontend-tests
+    volumes:
+      # Montar código fuente (para desarrollo)
+      - .:/app
+      # Excluir node_modules del host
+      - /app/node_modules
+      # Montar coverage como volumen para acceder desde host
+      - ./coverage:/app/coverage
+    environment:
+      - NODE_ENV=test
+      - CI=true
+      - EXPO_PUBLIC_API_URL=http://backend:8080
+    networks:
+      - vigilapp-network
+    command: npm test -- --coverage --watchAll=false --maxWorkers=2
+
+  # Servicio para ver reporte de cobertura (opcional)
+  coverage-viewer:
+    image: nginx:alpine
+    container_name: vigilapp-coverage-viewer
+    ports:
+      - "8081:80"
+    volumes:
+      - ./coverage/lcov-report:/usr/share/nginx/html:ro
+    networks:
+      - vigilapp-network
+    depends_on:
+      - frontend-tests
+    profiles:
+      - viewer
+
+networks:
+  vigilapp-network:
+    name: vigilapp-network
+    driver: bridge
+
+volumes:
+  coverage:
+    name: vigilapp-frontend-coverage

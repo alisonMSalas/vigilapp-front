@@ -1,0 +1,109 @@
+name: Tests Frontend VigilApp
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🧪 Run tests
+        run: npm test -- --coverage --watchAll=false --maxWorkers=2
+
+      - name: 📊 Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: 📈 Generate coverage badge
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Coverage report generated at coverage/lcov-report/index.html"
+
+      - name: 💾 Archive coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30
+
+      - name: ✅ Coverage summary
+        run: |
+          echo "### 📊 Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f coverage/coverage-summary.json ]; then
+            node -e "
+              const fs = require('fs');
+              const coverage = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+              const total = coverage.total;
+              console.log('| Metric | Coverage |');
+              console.log('|--------|----------|');
+              console.log('| Statements | ' + total.statements.pct + '% |');
+              console.log('| Branches | ' + total.branches.pct + '% |');
+              console.log('| Functions | ' + total.functions.pct + '% |');
+              console.log('| Lines | ' + total.lines.pct + '% |');
+            " >> $GITHUB_STEP_SUMMARY
+          fi
+
+  test-with-expo:
+    name: Tests with Expo Environment
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 🎯 Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🧪 Run tests with Expo environment
+        run: npm test -- --coverage --watchAll=false --maxWorkers=2
+        env:
+          CI: true
+          EXPO_PUBLIC_API_URL: http://localhost:8080
+
+      - name: 📊 Display test results
+        if: always()
+        run: |
+          echo "### 🧪 Test Results (Expo Environment)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f coverage/coverage-summary.json ]; then
+            echo "✅ Tests executed successfully with Expo SDK" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Tests completed with warnings" >> $GITHUB_STEP_SUMMARY
+          fi

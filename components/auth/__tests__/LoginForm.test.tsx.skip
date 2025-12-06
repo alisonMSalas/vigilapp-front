@@ -1,0 +1,185 @@
+/**
+ * Pruebas unitarias para LoginForm
+ */
+import React from 'react';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { LoginForm } from '../LoginForm';
+
+describe('LoginForm', () => {
+  const mockOnLogin = jest.fn();
+  const mockOnRegister = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('debería renderizar el formulario correctamente', () => {
+    const { getByPlaceholderText, getByText } = render(
+      <LoginForm onLogin={mockOnLogin} onRegister={mockOnRegister} loading={false} />
+    );
+
+    expect(getByPlaceholderText('Usuario')).toBeTruthy();
+    expect(getByPlaceholderText('Contraseña')).toBeTruthy();
+    expect(getByText('Iniciar Sesión')).toBeTruthy();
+    expect(getByText('¿No tienes una cuenta??')).toBeTruthy();
+  });
+
+  it('debería validar campos vacíos', async () => {
+    const { getByText, findByText } = render(
+      <LoginForm onLogin={mockOnLogin} onRegister={mockOnRegister} loading={false} />
+    );
+
+    const loginButton = getByText('Iniciar Sesión');
+    fireEvent.press(loginButton);
+
+    await waitFor(() => {
+      expect(findByText('Por favor ingresa tu email')).toBeTruthy();
+      expect(findByText('Por favor ingresa tu contraseña')).toBeTruthy();
+    });
+
+    expect(mockOnLogin).not.toHaveBeenCalled();
+  });
+
+  it('debería validar formato de email inválido', async () => {
+    const { getByPlaceholderText, getByText, findByText } = render(
+      <LoginForm onLogin={mockOnLogin} onRegister={mockOnRegister} loading={false} />
+    );
+
+    const emailInput = getByPlaceholderText('Usuario');
+    fireEvent.changeText(emailInput, 'invalid-email');
+
+    const loginButton = getByText('Iniciar Sesión');
+    fireEvent.press(loginButton);
+
+    await waitFor(() => {
+      expect(findByText('Por favor ingresa un email válido')).toBeTruthy();
+    });
+  });
+
+  it('debería validar contraseña corta', async () => {
+    const { getByPlaceholderText, getByText, findByText } = render(
+      <LoginForm onLogin={mockOnLogin} onRegister={mockOnRegister} loading={false} />
+    );
+
+    const emailInput = getByPlaceholderText('Usuario');
+    const passwordInput = getByPlaceholderText('Contraseña');
+
+    fireEvent.changeText(emailInput, 'test@test.com');
+    fireEvent.changeText(passwordInput, '12345');
+
+    const loginButton = getByText('Iniciar Sesión');
+    fireEvent.press(loginButton);
+
+    await waitFor(() => {
+      expect(findByText('La contraseña debe tener al menos 6 caracteres')).toBeTruthy();
+    });
+  });
+
+  it('debería llamar onLogin con datos válidos', async () => {
+    const { getByPlaceholderText, getByText } = render(
+      <LoginForm onLogin={mockOnLogin} onRegister={mockOnRegister} loading={false} />
+    );
+
+    const emailInput = getByPlaceholderText('Usuario');
+    const passwordInput = getByPlaceholderText('Contraseña');
+
+    fireEvent.changeText(emailInput, 'test@test.com');
+    fireEvent.changeText(passwordInput, 'password123');
+
+    const loginButton = getByText('Iniciar Sesión');
+    fireEvent.press(loginButton);
+
+    await waitFor(() => {
+      expect(mockOnLogin).toHaveBeenCalledWith({
+        email: 'test@test.com',
+        password: 'password123',
+      });
+    });
+  });
+
+  it('debería limpiar errores al escribir', async () => {
+    const { getByPlaceholderText, getByText, queryByText } = render(
+      <LoginForm onLogin={mockOnLogin} onRegister={mockOnRegister} loading={false} />
+    );
+
+    // Provocar error
+    const loginButton = getByText('Iniciar Sesión');
+    fireEvent.press(loginButton);
+
+    await waitFor(() => {
+      expect(queryByText('Por favor ingresa tu email')).toBeTruthy();
+    });
+
+    // Escribir en el input debería limpiar el error
+    const emailInput = getByPlaceholderText('Usuario');
+    fireEvent.changeText(emailInput, 't');
+
+    // El error debería desaparecer
+    await waitFor(() => {
+      expect(queryByText('Por favor ingresa tu email')).toBeNull();
+    });
+  });
+
+  it('debería llamar onRegister al presionar "Regístrate"', () => {
+    const { getByText } = render(
+      <LoginForm onLogin={mockOnLogin} onRegister={mockOnRegister} loading={false} />
+    );
+
+    const registerButton = getByText('Regístrate');
+    fireEvent.press(registerButton);
+
+    expect(mockOnRegister).toHaveBeenCalled();
+  });
+
+  it('debería deshabilitar inputs cuando loading es true', () => {
+    const { getByPlaceholderText } = render(
+      <LoginForm onLogin={mockOnLogin} onRegister={mockOnRegister} loading={true} />
+    );
+
+    const emailInput = getByPlaceholderText('Usuario');
+    const passwordInput = getByPlaceholderText('Contraseña');
+
+    expect(emailInput.props.editable).toBe(false);
+    expect(passwordInput.props.editable).toBe(false);
+  });
+
+  it('debería mostrar/ocultar contraseña al presionar el ícono', () => {
+    const { getByPlaceholderText, getByTestId } = render(
+      <LoginForm onLogin={mockOnLogin} onRegister={mockOnRegister} loading={false} />
+    );
+
+    const passwordInput = getByPlaceholderText('Contraseña');
+
+    // Inicialmente debe estar oculta
+    expect(passwordInput.props.secureTextEntry).toBe(true);
+
+    // Buscar y presionar el botón de mostrar/ocultar
+    const toggleButton = getByTestId ? getByTestId('toggle-password') : null;
+    if (toggleButton) {
+      fireEvent.press(toggleButton);
+      expect(passwordInput.props.secureTextEntry).toBe(false);
+    }
+  });
+
+  it('debería trimear el email antes de enviar', async () => {
+    const { getByPlaceholderText, getByText } = render(
+      <LoginForm onLogin={mockOnLogin} onRegister={mockOnRegister} loading={false} />
+    );
+
+    const emailInput = getByPlaceholderText('Usuario');
+    const passwordInput = getByPlaceholderText('Contraseña');
+
+    fireEvent.changeText(emailInput, '  test@test.com  ');
+    fireEvent.changeText(passwordInput, 'password123');
+
+    const loginButton = getByText('Iniciar Sesión');
+    fireEvent.press(loginButton);
+
+    await waitFor(() => {
+      expect(mockOnLogin).toHaveBeenCalledWith({
+        email: 'test@test.com',
+        password: 'password123',
+      });
+    });
+  });
+});

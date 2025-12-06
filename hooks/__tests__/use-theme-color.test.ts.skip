@@ -1,0 +1,92 @@
+/**
+ * Pruebas unitarias para useThemeColor hook
+ */
+import { renderHook } from '@testing-library/react-native';
+
+// Mock useColorScheme antes de importar el hook
+const mockUseColorScheme = jest.fn();
+
+// Mock react-native completamente para evitar TurboModule issues
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native');
+  
+  // Crear mock de Settings que no usa TurboModules
+  const mockSettings = {
+    get: jest.fn(),
+    set: jest.fn(),
+    watchKeys: jest.fn(),
+    clearWatch: jest.fn(),
+  };
+  
+  return {
+    ...RN,
+    useColorScheme: mockUseColorScheme,
+    Settings: mockSettings,
+    Platform: {
+      ...RN.Platform,
+      OS: 'ios',
+      select: (obj: any) => obj.ios || obj.default,
+    },
+  };
+});
+
+import { useThemeColor } from '../use-theme-color';
+
+describe('useThemeColor', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('debería retornar color light cuando el esquema es light', () => {
+    mockUseColorScheme.mockReturnValue('light');
+
+    const { result } = renderHook(() =>
+      useThemeColor({ light: '#ffffff', dark: '#000000' }, 'background')
+    );
+
+    expect(result.current).toBe('#ffffff');
+  });
+
+  it('debería retornar color dark cuando el esquema es dark', () => {
+    mockUseColorScheme.mockReturnValue('dark');
+
+    const { result } = renderHook(() =>
+      useThemeColor({ light: '#ffffff', dark: '#000000' }, 'background')
+    );
+
+    expect(result.current).toBe('#000000');
+  });
+
+  it('debería usar color por defecto de Colors cuando no hay prop', () => {
+    mockUseColorScheme.mockReturnValue('light');
+
+    const { result } = renderHook(() =>
+      useThemeColor({}, 'text')
+    );
+
+    // Debería retornar el color del tema por defecto
+    expect(result.current).toBeDefined();
+    expect(typeof result.current).toBe('string');
+  });
+
+  it('debería usar light como fallback cuando useColorScheme retorna null', () => {
+    mockUseColorScheme.mockReturnValue(null);
+
+    const { result } = renderHook(() =>
+      useThemeColor({ light: '#ffffff', dark: '#000000' }, 'background')
+    );
+
+    expect(result.current).toBe('#ffffff');
+  });
+
+  it('debería priorizar props sobre Colors por defecto', () => {
+    mockUseColorScheme.mockReturnValue('light');
+
+    const customColor = '#ff0000';
+    const { result } = renderHook(() =>
+      useThemeColor({ light: customColor }, 'text')
+    );
+
+    expect(result.current).toBe(customColor);
+  });
+});
